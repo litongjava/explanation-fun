@@ -1,4 +1,4 @@
-/* 整个页面居中 */
+/* 保持原有样式 */
 .home-page {
   max-width: 1200px;
   margin: 0 auto;
@@ -86,7 +86,7 @@
   background-color: #40a9ff;
 }
 
-/* 历史/推荐视频网格 */
+/* 推荐/历史视频网格 */
 .videos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -152,4 +152,46 @@
 .pagination span {
   font-size: 16px;
   color: #555;
+}
+
+/* ================ 移动端适配 ================ */
+@media (max-width: 600px) {
+  .home-page {
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  /* 输入框与按钮调整 */
+  .generate-section input {
+    width: 90%;
+    max-width: 300px;
+  }
+  .generate-section button {
+    width: 90%;
+    max-width: 300px;
+  }
+
+  /* 视频卡片和网格布局缩放 */
+  .generated-card {
+    max-width: 90%;
+    padding: 10px;
+  }
+
+  .videos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .video-item {
+    padding: 8px;
+  }
+
+  .pagination button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .pagination span {
+    font-size: 14px;
+  }
 }

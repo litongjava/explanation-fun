@@ -1,17 +1,14 @@
-/* 整个播放器页面：上移一些、居中、去掉 min-height 或仅设定较小值 */
 .player-page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; /* 如果希望贴近顶部，可以使用 flex-start */
-  padding: 40px 20px 20px; /* 上面留 40px，下面 20px */
-  /* min-height: 100vh;  <-- 如若想让页面随内容高度自适应，可以去掉或注释 */
+  justify-content: flex-start; /* 靠上 */
+  padding: 40px 20px 20px;
   background: #f0f2f5;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: #333;
 }
 
-/* 头部区域：返回按钮与视频标题 */
 .player-header {
   width: 100%;
   max-width: 1200px;
@@ -33,10 +30,9 @@
   text-decoration: underline;
 }
 
-/* 视频播放器容器：增大max-width并让视频宽度自适应 */
 .video-container {
   width: 100%;
-  max-width: 1200px; /* 如果需要更大或更小，可自行调整 */
+  max-width: 1200px;
   margin-bottom: 20px;
   background: #fff;
   padding: 10px;
@@ -45,17 +41,11 @@
   text-align: center;
 }
 
-/* 让视频按16:9宽高比自适应宽屏 */
 .video-container video {
   width: 100%;
   height: auto;
-  /* 有些现代浏览器可使用 aspect-ratio 属性
-     aspect-ratio: 16 / 9;
-     但在不支持该属性的浏览器中，会 fallback 到width/height:auto行为
-   */
 }
 
-/* 视频信息展示区域 */
 .video-info {
   width: 100%;
   max-width: 1200px;
@@ -74,7 +64,6 @@
   word-break: break-all;
 }
 
-/* 链接样式 */
 a {
   color: #1890ff;
   text-decoration: none;
@@ -82,4 +71,37 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* ================ 移动端适配 ================ */
+@media (max-width: 600px) {
+  .player-page {
+    padding: 20px 10px;
+  }
+
+  .player-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .player-header h1 {
+    font-size: 20px;
+    margin-top: 10px;
+  }
+
+  .video-container,
+  .video-info {
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  .back-button {
+    font-size: 14px;
+  }
+
+  /* 如果需要，也可以调整视频信息字体大小 */
+  .video-info p,
+  .video-info h3 {
+    font-size: 14px;
+  }
 }
