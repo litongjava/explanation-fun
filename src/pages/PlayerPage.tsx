@@ -1,5 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {useLocation, useNavigate, useParams} from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import DPlayer from 'dplayer';
 import Hls from 'hls.js';
 import './PlayerPage.css';
 
@@ -10,25 +11,27 @@ interface VideoInfo {
 }
 
 export default function PlayerPage() {
-  // 获取路由参数中的 id
-  const {id} = useParams<{ id: string }>();
+  // 从路由中获取 id 参数
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  // videoRef 用于 video 标签引用
-  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // 优先使用传递过来的 state，否则为空
+  // DPlayer 播放器容器 ref
+  const containerRef = useRef<HTMLDivElement>(null);
+  // 保存 DPlayer 实例引用，便于后续销毁播放器
+  const dpRef = useRef<any>(null);
+
+  // 优先使用 route 的 state 中传入的视频信息
   const locationState = location.state as VideoInfo | undefined;
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(locationState || null);
   const [loading, setLoading] = useState(!locationState);
 
-  // 如果 location.state 丢失，则根据路由 id 调用后端接口获取视频详情
+  // 如果 videoInfo 不存在，则通过路由 id 从后端接口获取视频详情
   useEffect(() => {
     if (!videoInfo && id) {
-      // 请根据实际后端接口地址进行调整，此处假设接口返回的视频信息格式与 VideoInfo 一致
       fetch(`https://manim.fly.dev/api/v1/video/detail?id=${id}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.code === 1 && data.ok && data.data) {
             setVideoInfo({
               videoUrl: data.data.video_url,
@@ -40,32 +43,62 @@ export default function PlayerPage() {
           }
           setLoading(false);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('获取视频信息出错:', err);
           setLoading(false);
         });
     }
   }, [id, videoInfo]);
 
-  // 初始化视频播放，根据视频地址后缀判断使用 hls.js 还是直接赋值
+  // 当 videoInfo 可用时，初始化 DPlayer 播放器
   useEffect(() => {
-    if (videoInfo && videoRef.current) {
-      // 如果视频地址以 .m3u8 结尾，则使用 hls.js 播放
+    if (videoInfo && containerRef.current) {
+      let videoType: string = 'normal';
+      // 如果视频地址以 .m3u8 结尾，则使用内置 hls 播放器（须使用全局 Hls）
       if (videoInfo.videoUrl.endsWith('.m3u8')) {
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(videoInfo.videoUrl);
-          hls.attachMedia(videoRef.current);
-          return () => {
-            hls.destroy();
-          };
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current.src = videoInfo.videoUrl;
-        }
-      } else {
-        // 否则直接赋值给 video 标签
-        videoRef.current.src = videoInfo.videoUrl;
+        videoType = 'hls';
+        // 将 Hls 挂载到全局（DPlayer 内部会从 window.Hls 获取）
+        (window as any).Hls = Hls;
       }
+
+      dpRef.current = new DPlayer({
+        container: containerRef.current,
+        autoplay: false,
+        // 建议设置 preload 为 'auto' 以便尽快加载数据
+        preload: 'auto',
+        video: {
+          url: videoInfo.videoUrl,
+          pic: videoInfo.coverUrl,
+          type: videoType,
+        },
+        pluginOptions: {
+          hls: {
+            // 如有需要可在这里传入额外的 hls.js 配置，比如 debug: true
+            // debug: true,
+          },
+        },
+      });
+
+      // 如果为 hls 播放，添加 loadedmetadata 事件，在视频元数据加载完成后跳转到 0.1 秒（触发缓冲），并启动播放
+      if (videoType === 'hls' && dpRef.current && dpRef.current.video) {
+        dpRef.current.video.addEventListener('loadedmetadata', () => {
+          // 轻微快进以触发加载
+          dpRef.current.video.currentTime = 0.1;
+          dpRef.current.play();
+        });
+      }
+
+      // 组件卸载时销毁播放器（以及可能的 hls 实例）
+      return () => {
+        if (dpRef.current) {
+          // 如果自定义挂载了 Hls 实例到播放器上，则销毁它
+          if (dpRef.current.$hls) {
+            dpRef.current.$hls.destroy();
+          }
+          dpRef.current.destroy();
+          dpRef.current = null;
+        }
+      };
     }
   }, [videoInfo]);
 
@@ -96,7 +129,8 @@ export default function PlayerPage() {
       </header>
 
       <div className="video-container">
-        <video ref={videoRef} controls poster={videoInfo.coverUrl}/>
+        {/* DPlayer 播放器容器 */}
+        <div ref={containerRef}></div>
       </div>
 
       <div className="video-info">
