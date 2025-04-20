@@ -45,16 +45,16 @@
   width: 100%;
   height: auto;
   /* 默认加个白色背景，防止底色是黑 */
-  background-color: #fff !important;
+  /*background-color: #fff !important;*/
   /* 浅色模式下反转色彩：黑 -> 白 */
-  filter: invert(1) !important;
+  /*filter: invert(1) !important;*/
 }
 /* 深色模式下取消反转，恢复原色 */
-@media (prefers-color-scheme: dark) {
-  .video-container video {
-    filter: invert(0) !important;
-  }
-}
+/*@media (prefers-color-scheme: dark) {*/
+/*  .video-container video {*/
+/*    filter: invert(0) !important;*/
+/*  }*/
+/*}*/
 .video-info {
   width: 100%;
   max-width: 1200px;
