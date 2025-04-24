@@ -73,8 +73,16 @@ export default function PlayerPage() {
         },
         pluginOptions: {
           hls: {
-            // 如有需要可在这里传入额外的 hls.js 配置，比如 debug: true
-            // debug: true,
+            debug: false,
+            enableWorker: true,
+            lowLatencyMode: true,
+            // 增大内存缓冲区允许的最大秒数
+            maxBufferLength: 60,               // 默认 30s
+            maxMaxBufferLength: 600,           // 对 live 场景更友好
+            maxBufferSize: 50 * 1000 * 1000,   // 50MB
+            // 如果是直播流，可以加快同步速度
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 10,
           },
         },
       });
