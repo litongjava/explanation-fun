@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import './HomePage.css'; // 根据需要编写样式
 
@@ -45,7 +45,7 @@ export default function HomePage() {
   // 根据页码加载推荐视频列表，计算 offset 为 (page - 1)
   useEffect(() => {
     const offset = page - 1;
-    fetch(`https://manim.fly.dev/api/v1/video/recommends?offset=${offset}&limit=${limit}&sort_by=recent`)
+    fetch(import.meta.env.VITE_BACKEND_BASE_URL + `/api/v1/video/recommends?offset=${offset}&limit=${limit}&sort_by=recent`)
       .then(response => response.json())
       .then(data => {
         if (data.code === 1 && data.ok) {
@@ -69,7 +69,7 @@ export default function HomePage() {
     setError('');
     setLoading(true);
 
-    const url = `https://manim.fly.dev/manim/video?topic=${encodeURIComponent(topic)}`;
+    const url = import.meta.env.VITE_BACKEND_BASE_URL + `/manim/video?topic=${encodeURIComponent(topic)}`;
     fetch(url)
       .then(res => res.json())
       .then((data: GenerationResponse) => {

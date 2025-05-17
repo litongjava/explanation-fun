@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, {useEffect, useRef, useState} from 'react';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import DPlayer from 'dplayer';
 import Hls from 'hls.js';
 import './PlayerPage.css';
@@ -12,7 +12,7 @@ interface VideoInfo {
 
 export default function PlayerPage() {
   // 从路由中获取 id 参数
-  const { id } = useParams<{ id: string }>();
+  const {id} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,7 +29,7 @@ export default function PlayerPage() {
   // 如果 videoInfo 不存在，则通过路由 id 从后端接口获取视频详情
   useEffect(() => {
     if (!videoInfo && id) {
-      fetch(`https://manim.fly.dev/api/v1/video/detail?id=${id}`)
+      fetch(import.meta.env.VITE_BACKEND_BASE_URL + `/api/v1/video/detail?id=${id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.code === 1 && data.ok && data.data) {
