@@ -1,11 +1,143 @@
-/* 保持原有样式 */
-.home-page {
+/* src/pages/HomePage.css */
+.homepage-container {
   max-width: 1200px;
   margin: 0 auto;
   text-align: center;
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #f7f9fc;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.homepage-container h1 {
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.upload-section {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.upload-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.upload-button:hover {
+  background-color: #0056b3;
+}
+
+.image-preview {
+  margin-top: 15px;
+  max-width: 300px; /* Limit preview size */
+  max-height: 200px;
+  border: 1px solid #ddd;
+  padding: 5px;
+  border-radius: 4px;
+  overflow: hidden; /* Ensure image fits */
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 190px; /* Account for padding */
+  display: block;
+  object-fit: contain; /* Or 'cover' depending on desired behavior */
+}
+
+.controls-section {
+  display: flex;
+  gap: 20px; /* Space between select groups */
+  margin-bottom: 20px;
+  width: 100%;
+  justify-content: center; /* Center the select groups */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.select-group {
+  display: flex;
+  flex-direction: column; /* Stack label and select vertically */
+  align-items: flex-start; /* Align label to the start */
+}
+
+.select-group label {
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #555;
+}
+
+.select-group select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  min-width: 180px; /* Give selects some width */
+}
+
+.concept-input-section {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.concept-input-section textarea {
+  width: calc(100% - 22px); /* Account for padding and border */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  min-height: 80px; /* Similar to the screenshot's input field */
+  resize: vertical;
+  background-color: #e9f5e9; /* Light green background like screenshot */
+}
+
+.generate-button {
+  padding: 12px 25px;
+  background-color: #1a73e8; /* Blue button like screenshot */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color 0.2s;
+}
+
+.generate-button:hover {
+  background-color: #1558b8;
+}
+
+.generate-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.loading-message {
+  color: #007bff;
+  margin: 10px 0;
+}
+
+.error-message {
+  color: red;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid red;
+  border-radius: 4px;
+  background-color: #ffebee;
+  width: calc(100% - 22px);
+  box-sizing: border-box;
 }
 
 /* 生成视频区域 - 输入框和按钮居中 */

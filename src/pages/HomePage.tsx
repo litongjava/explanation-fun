@@ -1,6 +1,7 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
 import {useNavigate} from 'react-router-dom';
-import './HomePage.css'; // 根据需要编写样式
+import './HomePage.css';
+import type {ParsedImageResponse} from "../type/type.ts"; // 根据需要编写样式
 
 type GenerationResponse = {
   code: number;
@@ -25,8 +26,8 @@ type VideoItem = {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  // 输入主题的 state
-  const [topic, setTopic] = useState('');
+
+
   // 生成后的视频记录（可以用于历史记录）
   const [generatedVideo, setGeneratedVideo] = useState<VideoItem | null>(null);
   // 错误提示信息
@@ -41,6 +42,15 @@ export default function HomePage() {
   const [total, setTotal] = useState(0);
   // 存储推荐视频列表
   const [videos, setVideos] = useState<VideoItem[]>([]);
+
+  const [conceptText, setConceptText] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [parsedImageId, setParsedImageId] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('zh-CN');
+  const [selectedProvider, setSelectedProvider] = useState<string>('openai');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 根据页码加载推荐视频列表，计算 offset 为 (page - 1)
   useEffect(() => {
@@ -60,40 +70,15 @@ export default function HomePage() {
       });
   }, [page]);
 
-  // 调用生成接口生成视频
-  const generateVideo = () => {
-    if (!topic.trim()) {
-      setError('请输入主题');
-      return;
-    }
-    setError('');
-    setLoading(true);
+  // Cleanup for preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
-    const url = import.meta.env.VITE_BACKEND_BASE_URL + `/manim/video?topic=${encodeURIComponent(topic)}`;
-    fetch(url)
-      .then(res => res.json())
-      .then((data: GenerationResponse) => {
-        setLoading(false);
-        if (data.code === 1 && data.ok && data.data) {
-          const newVideo: VideoItem = {
-            id: new Date().getTime().toString(), // 生成一个简单的唯一 ID
-            cover_url: data.data.cover_url,
-            title: topic,
-            video_url: data.data.video_url,
-          };
-          setGeneratedVideo(newVideo);
-          // 如果需要，也可以直接加入推荐列表中，实现“历史记录”
-          // setVideos(prev => [newVideo, ...prev]);
-        } else {
-          setError('视频生成失败');
-        }
-      })
-      .catch(err => {
-        console.error('生成视频出错:', err);
-        setLoading(false);
-        setError('视频生成失败');
-      });
-  };
 
   // 点击视频跳转到播放器页面
   const handlePlayVideo = (video: VideoItem) => {
@@ -117,24 +102,172 @@ export default function HomePage() {
     }
   };
 
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setError(null); // Clear previous errors
+
+      // Create a preview
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl); // Revoke old object URL
+      }
+      const newPreviewUrl = URL.createObjectURL(file);
+      setPreviewUrl(newPreviewUrl);
+
+      // Automatically parse the image upon selection
+      await handleParseImage(file);
+    } else {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setConceptText(''); // Clear text if file is removed
+      setParsedImageId(null);
+    }
+  };
+
+  const handleParseImage = async (fileToParse: File) => {
+    if (!fileToParse) {
+      setError('Please select an image file first.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setConceptText(''); // Clear previous parsed text
+    setParsedImageId(null);
+
+    const formData = new FormData();
+    formData.append('file', fileToParse);
+
+    try {
+      const response = await fetch(import.meta.env.VITE_BACKEND_BASE_URL + '/api/v1/file/parse', {
+        method: 'POST',
+        body: formData,
+        // Note: Don't set 'Content-Type' header manually for FormData,
+        // the browser will set it correctly with the boundary.
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.code === 1 && result.ok && result.data) {
+        const data = result.data as ParsedImageResponse;
+        setConceptText(data.content);
+        setParsedImageId(data.id);
+      } else {
+        throw new Error(result.msg || result.error || 'Failed to parse image.');
+      }
+    } catch (err: any) {
+      console.error('Error parsing image:', err);
+      setError(err.message || 'An unexpected error occurred during parsing.');
+      setConceptText(''); // Clear text on error
+      setParsedImageId(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedLanguage(event.target.value);
+  };
+
+  const handleProviderChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedProvider(event.target.value);
+  };
+
+  const handleGenerateVideo = () => {
+    if (!conceptText) {
+      setError('Please provide a concept, either by typing or uploading an image.');
+      return;
+    }
+    if (!conceptText.trim()) {
+      setError('请输入主题');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    const url = import.meta.env.VITE_BACKEND_BASE_URL + `/manim/video?topic=${encodeURIComponent(conceptText)}`;
+    fetch(url)
+      .then(res => res.json())
+      .then((data: GenerationResponse) => {
+        setLoading(false);
+        if (data.code === 1 && data.ok && data.data) {
+          const newVideo: VideoItem = {
+            id: new Date().getTime().toString(), // 生成一个简单的唯一 ID
+            cover_url: data.data.cover_url,
+            title: conceptText,
+            video_url: data.data.video_url,
+          };
+          setGeneratedVideo(newVideo);
+          // 如果需要，也可以直接加入推荐列表中，实现“历史记录”
+          // setVideos(prev => [newVideo, ...prev]);
+        } else {
+          setError('视频生成失败');
+        }
+      })
+      .catch(err => {
+        console.error('生成视频出错:', err);
+        setLoading(false);
+        setError('视频生成失败');
+      });
+  };
+
+
   return (
-    <div className="home-page">
+
+    <div className="homepage-container">
       <h1>Teach Me Anything</h1>
+      <div className="controls-section">
+        <div className="select-group">
+          <label htmlFor="language-select">Language:</label>
+          <select id="language-select" value={selectedLanguage} onChange={handleLanguageChange}>
+            <option value="zh-CN">简体中文 (Chinese)</option>
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Español (Spanish)</option>
+            {/* Add more languages as needed */}
+          </select>
+        </div>
 
-      {/* 输入生成视频的部分 */}
-      <div className="generate-section">
-        <input
-          type="text"
-          placeholder="描述想要讲解的技术概念"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-        />
-        <button onClick={generateVideo} disabled={loading}>
-          {loading ? '生成中...' : '生成视频'}
-        </button>
+        <div className="select-group">
+          <label htmlFor="provider-select">LLM Provider:</label>
+          <select id="provider-select" value={selectedProvider} onChange={handleProviderChange}>
+            <option value="openai">OpenAI</option>
+            <option value="google">Google Gemini</option>
+            <option value="anthropic">Anthropic Claude</option>
+            {/* Add more providers as needed */}
+          </select>
+        </div>
       </div>
+      <div className="concept-input-section">
+        <textarea
+          placeholder="描述想要讲解的技术概念 (或上传图片自动填充)"
+          value={conceptText}
+          onChange={(e) => setConceptText(e.target.value)}
+          rows={5}
+        />
+      </div>
+      <div className="upload-section">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          style={{display: 'none'}} // Hide default input
+        />
+        <button onClick={() => fileInputRef.current?.click()} className="upload-button">
+          {selectedFile ? 'Change Image' : 'Upload Image'}
+        </button>
+        {previewUrl && (
+          <div className="image-preview">
+            <img src={previewUrl} alt="Preview"/>
+          </div>
+        )}
+      </div>
+      {isLoading && <p className="loading-message">Parsing image, please wait...</p>}
+      {error && <p className="error-message">{error}</p>}
 
-      {error && <p className="error">{error}</p>}
+      <button onClick={handleGenerateVideo} className="generate-button" disabled={isLoading}>
+        Generate Video
+      </button>
 
       {/* 生成成功后的视频卡片 */}
       {generatedVideo && (
@@ -144,6 +277,7 @@ export default function HomePage() {
           <button onClick={() => handlePlayVideo(generatedVideo)}>去播放</button>
         </div>
       )}
+
 
       {/* 推荐/历史视频展示 */}
       <h2>推荐/历史视频</h2>
