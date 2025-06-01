@@ -42,6 +42,11 @@
   background-color: #0056b3;
 }
 
+.upload-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
 .image-preview {
   margin-top: 15px;
   max-width: 300px; /* Limit preview size */
@@ -104,25 +109,7 @@
   background-color: #e9f5e9; /* Light green background like screenshot */
 }
 
-.generate-button {
-  padding: 12px 25px;
-  background-color: #1a73e8; /* Blue button like screenshot */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 18px;
-  transition: background-color 0.2s;
-}
 
-.generate-button:hover {
-  background-color: #1558b8;
-}
-
-.generate-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
 
 .loading-message {
   color: #007bff;
