@@ -10,6 +10,8 @@ interface VideoInfo {
   videoUrl: string;
   coverUrl: string;
   title: string;
+  answer: string;
+  transcript: string[];
 }
 
 interface SSERouteParams {
@@ -26,50 +28,46 @@ export default function PlayerPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // SSE 传进来的参数，当 URL 里还没 id 时，就在这里发 SSE
+  // SSE 传入的参数
   const sseParams = (location.state as SSERouteParams) || null;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dpRef = useRef<any>(null);
 
-  // 影片信息：有值时就立即播放
+  // 完整的 VideoInfo，通过接口获取
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
 
-  // “videoId” 保存当前已知的 ID（无论是从 routeId 来，还是 SSE 返回来的）
+  // 当前视频 ID
   const [videoId, setVideoId] = useState<string | null>(routeId || null);
 
-  // loading 状态：在没有 videoInfo 时为 true
+  // loading 状态
   const [, setLoadingInfo] = useState<boolean>(true);
 
-  // 倒计时、累计秒数、是否超出两分钟
+  // 倒计时、累计秒数
   const [countdown, setCountdown] = useState(120);
   const [pastTwoMinutes, setPastTwoMinutes] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // 收到的 progress 文本列表，渲染到底部
+  // SSE 进度列表
   const [progressList, setProgressList] = useState<string[]>([]);
-
-  // 用来标记 SSE 是否已经结束
   const [isSSEDone, setIsSSEDone] = useState<boolean>(true);
-
-  // 用来保存 SSEReader Controller，以便后面主动取消
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
-
   const hasSubscribed = useRef(false);
 
-  // 新增：最后一次心跳时间（ms）和已经过去的秒数
+  // 心跳时间和已过秒数
   const [lastHeartbeatTime, setLastHeartbeatTime] = useState<number | null>(null);
   const [heartbeatElapsed, setHeartbeatElapsed] = useState<number>(0);
 
-  // —— STEP A：初始化倒计时、累计秒数 ——
+  // 当前活动标签：'info' | 'answer' | 'transcript'
+  const [activeTab, setActiveTab] = useState<'info' | 'answer' | 'transcript'>('info');
+
+  // —— STEP A：倒计时 & 累计秒数计时器 ——
   useEffect(() => {
-    // 如果已经有 videoInfo，就不需要倒计时
     if (videoInfo) {
       setLoadingInfo(false);
       return;
     }
     if (!videoInfo && videoId) {
-      // 有 videoId 但是还没拿到 videoInfo，也要继续 loading
       setLoadingInfo(true);
     }
 
@@ -89,20 +87,18 @@ export default function PlayerPage() {
     }
   }, [countdown]);
 
-  // 当 lastHeartbeatTime 更新时，启动一个定时器来更新 heartbeatElapsed
+  // 心跳计时器
   useEffect(() => {
     if (lastHeartbeatTime === null) return;
-
     const hbTimer = window.setInterval(() => {
       setHeartbeatElapsed(Math.floor((Date.now() - lastHeartbeatTime) / 1000));
     }, 1000);
-
     return () => {
       clearInterval(hbTimer);
     };
   }, [lastHeartbeatTime]);
 
-  // —— STEP B：如果 URL 里已有 ID，直接去拉一次 /video/detail 拿 video_url ——
+  // —— STEP B：若 URL 中已有 ID，立即拉取视频详情 ——
   useEffect(() => {
     if (videoId && isSSEDone) {
       fetchVideoDetail(videoId);
@@ -122,6 +118,8 @@ export default function PlayerPage() {
             videoUrl: data.video_url,
             coverUrl: data.cover_url,
             title: data.title || 'Video',
+            answer: data.answer || '',
+            transcript: Array.isArray(data.transcript) ? data.transcript : [],
           });
         }
       }
@@ -130,7 +128,7 @@ export default function PlayerPage() {
     }
   }
 
-  // —— STEP C：如果 URL 没有 ID，但 location.state 有 SSE 参数，就发 SSE ——
+  // —— STEP C：如果 URL 无 ID，但有 SSE 参数，则发起 SSE ——
   useEffect(() => {
     if (!videoId && sseParams && !hasSubscribed.current) {
       hasSubscribed.current = true;
@@ -143,14 +141,14 @@ export default function PlayerPage() {
         language: sseParams.language,
         user_id: sseParams.user_id,
         onEvent: (event: SSEEvent) => {
-          // 1) 心跳事件：更新 lastHeartbeatTime 并重置已过秒数
+          // 心跳事件
           if (event.type === 'heartbeat') {
             setLastHeartbeatTime(Date.now());
             setHeartbeatElapsed(0);
             return;
           }
 
-          // 2) 如果收到 progress，就把信息 append 到列表
+          // 进度更新
           if (event.type === 'progress') {
             try {
               const payload = JSON.parse(event.data) as { info: string };
@@ -161,7 +159,7 @@ export default function PlayerPage() {
             return;
           }
 
-          // 3) 如果收到 task / metadata，就解析出 id，并把 URL 栏替换成 /player/<id>
+          // 收到 ID（task/metadata）
           if (event.type === 'task' || event.type === 'metadata') {
             try {
               const payload = JSON.parse(event.data) as { id: string };
@@ -174,7 +172,7 @@ export default function PlayerPage() {
             return;
           }
 
-          // 4) 如果收到 main，就表示已经拿到视频播放 URL，直接设置 videoInfo
+          // 收到 main（直接拿到播放 URL）
           if (event.type === 'main') {
             try {
               const payload = JSON.parse(event.data) as { url: string };
@@ -183,6 +181,8 @@ export default function PlayerPage() {
                 videoUrl,
                 coverUrl: prev?.coverUrl || '',
                 title: prev?.title || sseParams.prompt,
+                answer: '',
+                transcript: [],
               }));
             } catch (e) {
               console.error('解析 main event 失败:', e);
@@ -190,7 +190,7 @@ export default function PlayerPage() {
             return;
           }
 
-          // 5) 如果连接结束但还没拿到 video_url，就交给后面 STEP D 的轮询去拿
+          // SSE 完成
           if (event.type === 'done') {
             sseReaderRef.current = null;
             setIsSSEDone(true);
@@ -204,7 +204,7 @@ export default function PlayerPage() {
     }
   }, [videoId, sseParams]);
 
-  // —— STEP D：如果 SSE 完成或根本没有 SSE，但拿到 videoId 且还没拿到 videoInfo，就继续轮询，一直到 30 分钟为止 ——
+  // —— STEP D：轮询获取 videoInfo ——
   useEffect(() => {
     const shouldPoll = Boolean(videoId && !videoInfo && (isSSEDone || !sseParams));
     if (!shouldPoll) return;
@@ -226,6 +226,8 @@ export default function PlayerPage() {
               videoUrl: data.video_url,
               coverUrl: data.cover_url,
               title: data.title || 'Video',
+              answer: data.answer || '',
+              transcript: Array.isArray(data.transcript) ? data.transcript : [],
             });
           }
         }
@@ -252,7 +254,7 @@ export default function PlayerPage() {
     };
   }, [videoId, videoInfo, elapsedSeconds, isSSEDone, sseParams]);
 
-  // —— STEP E：一旦拿到 videoInfo，就初始化 DPlayer 播放器 ——
+  // —— STEP E：初始化 DPlayer 播放器 ——
   useEffect(() => {
     if (!videoInfo || !containerRef.current) return;
     setLoadingInfo(false);
@@ -305,9 +307,9 @@ export default function PlayerPage() {
     };
   }, [videoInfo]);
 
-  // —— STEP F：合并为单个 return，通过条件渲染不同 UI ——
+  // 渲染不同状态下的 UI
   const renderContent = () => {
-    // 1) 没有 videoId，也没有 sseParams：错误视图
+    // 1) 未找到 videoId，也没有 SSE 参数
     if (!videoId && !sseParams) {
       return (
         <div className="player-page">
@@ -317,7 +319,7 @@ export default function PlayerPage() {
       );
     }
 
-    // 2) 有 sseParams 且还没拿到 videoId，或 videoId 有但 countdown > 0：生成中视图
+    // 2) 视频生成中（前两分钟）
     if ((!videoInfo && !routeId && sseParams) || (!videoInfo && countdown > 0 && videoId)) {
       return (
         <div className="player-page">
@@ -355,7 +357,7 @@ export default function PlayerPage() {
       );
     }
 
-    // 3) 倒计时已过两分钟，但还没拿到 videoInfo，且未超过 30 分钟：继续后台轮询视图
+    // 3) 超过两分钟继续后台轮询
     if (!videoInfo && pastTwoMinutes && elapsedSeconds < 1800) {
       return (
         <div className="player-page">
@@ -366,9 +368,7 @@ export default function PlayerPage() {
             <h1>继续等待生成</h1>
           </header>
           <div className="waiting-info">
-            <p>
-              已超过两分钟，正在继续后台轮询，请耐心等待。若超过30分钟仍然缺少结果，会提示您联系客服。
-            </p>
+            <p>已超过两分钟，正在继续后台轮询，请耐心等待。若超过30分钟仍然缺少结果，会提示您联系客服。</p>
             <p>
               已等待：{Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
             </p>
@@ -392,7 +392,7 @@ export default function PlayerPage() {
       );
     }
 
-    // 4) 超过 30 分钟还没拿到 videoInfo：生成失败视图
+    // 4) 超过30分钟仍未拿到 videoInfo => 失败视图
     if (!videoInfo && elapsedSeconds >= 1800) {
       return (
         <div className="player-page">
@@ -424,54 +424,99 @@ export default function PlayerPage() {
       );
     }
 
-    // 5) 成功拿到 videoInfo，展示播放器视图
-    return (
-      <div className="player-page">
-        <header className="player-header">
-          <button onClick={() => navigate(-1)} className="back-button">
-            ← 返回
-          </button>
-          <h1>{videoInfo!.title}</h1>
-        </header>
+    // 5) 拿到 videoInfo => 播放器 + 标签页
+    if (videoInfo) {
+      return (
+        <div className="player-page">
+          <header className="player-header">
+            <button onClick={() => navigate(-1)} className="back-button">
+              ← 返回
+            </button>
+            <h1>{videoInfo.title}</h1>
+          </header>
 
-        <div className="video-container">
-          <div ref={containerRef}></div>
-        </div>
-
-        <div className="video-info">
-          <h3>视频信息</h3>
-          <p>
-            <strong>视频地址: </strong>
-            <a href={videoInfo!.videoUrl} target="_blank" rel="noopener noreferrer">
-              {videoInfo!.videoUrl}
-            </a>
-          </p>
-          <p>
-            <strong>封面地址: </strong>
-            <a href={videoInfo!.coverUrl} target="_blank" rel="noopener noreferrer">
-              {videoInfo!.coverUrl}
-            </a>
-          </p>
-        </div>
-
-        {/* 当前 SSE 尚未结束时显示最后一次心跳距离 */}
-        {!isSSEDone && (
-          <div className="heartbeat-info">
-            <p>距离上次心跳：{heartbeatElapsed} 秒</p>
+          <div className="video-container">
+            <div ref={containerRef}></div>
           </div>
-        )}
-        {!isSSEDone && (
-          <div className="progress-list">
-            <h3>进度更新：</h3>
-            <ul>
-              {progressList.map((info, idx) => (
-                <li key={idx}>{info}</li>
-              ))}
-            </ul>
+
+          {/* 标签页切换 */}
+          <div className="tabs">
+            <button
+              className={activeTab === 'info' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('info')}
+            >
+              视频信息
+            </button>
+            <button
+              className={activeTab === 'answer' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('answer')}
+            >
+              Answer
+            </button>
+            <button
+              className={activeTab === 'transcript' ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab('transcript')}
+            >
+              Transcript
+            </button>
           </div>
-        )}
-      </div>
-    );
+
+          <div className="tab-content">
+            {activeTab === 'info' && (
+              <div className="tab-panel info-panel">
+                <p>
+                  <strong>视频地址: </strong>
+                  <a href={videoInfo.videoUrl} target="_blank" rel="noopener noreferrer">
+                    {videoInfo.videoUrl}
+                  </a>
+                </p>
+                <p>
+                  <strong>封面地址: </strong>
+                  <a href={videoInfo.coverUrl} target="_blank" rel="noopener noreferrer">
+                    {videoInfo.coverUrl}
+                  </a>
+                </p>
+              </div>
+            )}
+
+            {activeTab === 'answer' && (
+              <div className="tab-panel answer-panel">
+                <pre className="answer-text">{videoInfo.answer}</pre>
+              </div>
+            )}
+
+            {activeTab === 'transcript' && (
+              <div className="tab-panel transcript-panel">
+                <ul>
+                  {videoInfo.transcript.map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* 如果 SSE 还没结束，继续显示心跳与进度 */}
+          {!isSSEDone && (
+            <div className="heartbeat-info">
+              <p>距离上次心跳：{heartbeatElapsed} 秒</p>
+            </div>
+          )}
+          {!isSSEDone && (
+            <div className="progress-list">
+              <h3>进度更新：</h3>
+              <ul>
+                {progressList.map((info, idx) => (
+                  <li key={idx}>{info}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return <>{renderContent()}</>;
