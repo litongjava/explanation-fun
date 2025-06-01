@@ -208,10 +208,19 @@
 /* 推荐/历史视频网格 */
 .videos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(6, 1fr);   /* 6 列 */
+  grid-template-rows: repeat(2, auto);     /* 2 行（高度自动），可不写默认也会自动扩行 */
   gap: 20px;
   margin: 20px 0;
 }
+
+@media (max-width: 1024px) {
+  .videos-grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, auto);
+  }
+}
+
 
 .video-item {
   background: #fff;
