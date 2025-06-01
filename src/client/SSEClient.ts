@@ -1,7 +1,7 @@
 /**
  * SSE 事件的数据结构
  */
-interface SSEEvent {
+export interface SSEEvent {
   type: string;
   data: string; // 服务器发来的 data 都是字符串，必要时自行 JSON.parse
 }

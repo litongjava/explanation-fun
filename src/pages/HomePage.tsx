@@ -1,20 +1,20 @@
 // src/pages/HomePage.tsx
+
 import {useEffect, useState, useRef} from 'react';
 import {useNavigate} from 'react-router-dom';
 import './HomePage.css';
 import type {ParsedImageResponse, VideoItem} from '../type/type';
-import {UserIdConst} from "../type/UserIdConst.ts";
-import {sendVideoSSERequest} from "../client/SSEClient.ts";
+import {UserIdConst} from '../type/UserIdConst.ts'; // 确保这里导出了 TONG_LI
 
 export default function HomePage() {
   const navigate = useNavigate();
 
-  // 生成后的视频记录（可选，仅作预览用途）
-  const [generatedVideo, setGeneratedVideo] = useState<VideoItem | null>(null);
+  // 生成后的视频记录（现在不再直接用）
+  const [generatedVideo] = useState<VideoItem | null>(null);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  // 分页相关（保持不变）
+  // 分页相关（不变）
   const [page, setPage] = useState(1);
   const limit = 12;
   const [total, setTotal] = useState(0);
@@ -24,7 +24,7 @@ export default function HomePage() {
   const [conceptText, setConceptText] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [parsedImageId, setParsedImageId] = useState<string | null>(null);
+  const [, setParsedImageId] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('zh-CN');
   const [selectedProvider, setSelectedProvider] = useState<string>('openrouter');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -76,7 +76,7 @@ export default function HomePage() {
     if (page < totalPages) setPage(page + 1);
   };
 
-  // 图片上传 & 预览 & 自动解析
+  // 图片上传 & 预览 & 自动解析（和之前一模一样）
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     if (file) {
@@ -141,10 +141,9 @@ export default function HomePage() {
   /**
    * 点击“Generate Video”：
    * 1) 校验 conceptText
-   * 2) 调用 sendVideoSSERequest 发起 SSE，开始监听后端的 event
-   * 3) 一旦收到 “task” 事件(也就是后端给出的视频 ID)，就立刻 navigate(`/player/${id}`)
+   * 2) 直接 navigate('/player')，并把 SSE 所需的参数都传给 PlayerPage
    */
-  const handleGenerateVideo = async () => {
+  const handleGenerateVideo = () => {
     if (!conceptText || !conceptText.trim()) {
       setError('请输入主题');
       return;
@@ -152,39 +151,20 @@ export default function HomePage() {
     setError('');
     setLoading(true);
 
-    try {
-      await sendVideoSSERequest({
+    // 把参数放到 location.state 里，交给 PlayerPage 处理 SSE
+    navigate('/player', {
+      state: {
         prompt: conceptText,
-        provider: selectedProvider, // e.g. "openrouter"
-        voice_provider: 'openai', // 可以根据需要替换
-        voice_id: 'shimmer',
+        provider: selectedProvider,    // "openrouter"
+        voice_provider: 'openai',      // 固定为 openai
+        voice_id: 'shimmer',           // 固定为 shimmer
         language: selectedLanguage.startsWith('zh') ? 'zh' : 'en',
         user_id: UserIdConst.TONG_LI,
-        onEvent: (event) => {
-          // event.type 可能是 "200" / "task" / "progress" / "main" / …
-          if (event.type === 'task' || event.type === 'metadata') {
-            try {
-              const payload = JSON.parse(event.data) as { id: string };
-              const newId = payload.id;
-              // 一旦拿到后端给的视频 ID，就跳转到 PlayerPage
-              navigate(`/player/${newId}`, {
-                state: {
-                  // 也可以传 conceptText 之类的信息
-                  title: conceptText,
-                },
-              });
-            } catch (e) {
-              console.error('解析 task event 失败:', e);
-            }
-          }
-        },
-      });
-    } catch (e: any) {
-      console.error('发送 SSE 请求失败:', e);
-      setError(e.message || '生成视频失败');
-    } finally {
-      setLoading(false);
-    }
+      },
+    });
+
+    // 立即把 loading 关掉即可，PlayerPage 会做后续展示
+    setLoading(false);
   };
 
   return (
@@ -258,12 +238,10 @@ export default function HomePage() {
         />
       </div>
 
-
       {isLoading && (
         <p className="loading-message">Parsing image, please wait...</p>
       )}
       {error && <p className="error-message">{error}</p>}
-
 
       {generatedVideo && (
         <div className="generated-card">

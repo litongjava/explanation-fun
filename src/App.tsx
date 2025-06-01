@@ -9,7 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage/>}/>
         {/* 路由中包含 video id 参数 */}
-        <Route path="/player/:id" element={<PlayerPage/>}/>
+        <Route path="/player/:id?" element={<PlayerPage/>}/>
       </Routes>
     </BrowserRouter>
   );
