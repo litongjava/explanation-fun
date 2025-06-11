@@ -257,7 +257,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <h2>推荐/历史视频</h2>
+      <h2>历史视频</h2>
       <div className="videos-grid">
         {videos.map((video) => (
           <div
@@ -271,7 +271,7 @@ export default function HomePage() {
               width="160"
               height="90"
             />
-            <p>{video.title}</p>
+            <p className="multiline-ellipsis">{video.title}</p>
           </div>
         ))}
       </div>
