@@ -18,7 +18,7 @@ export interface SSEEvent {
  *   - onEvent: 回调每次收到 SSE event 时触发
  */
 export async function sendVideoSSERequest(options: {
-  prompt: string;
+  question: string;
   provider: string;
   voice_provider: string;
   voice_id: string;
@@ -27,7 +27,7 @@ export async function sendVideoSSERequest(options: {
   onEvent: (event: SSEEvent) => void;
 }) {
   const {
-    prompt,
+    question,
     provider,
     voice_provider,
     voice_id,
@@ -39,12 +39,13 @@ export async function sendVideoSSERequest(options: {
   // 假设后端的 SSE endpoint 就是这个 URL
   const url = import.meta.env.VITE_BACKEND_BASE_URL + '/api/explanation/video';
   const body = {
-    prompt,
+    question,
     provider,
     voice_provider,
     voice_id,
     language,
     user_id,
+    generate_type:1,
     stream: true,
   };
 
