@@ -588,24 +588,31 @@ export default function PlayerPage() {
                   </div>
                   <div className="answer-content">
                     <ReactMarkdown
-                      children={preprocessMathContent(videoInfo.answer)}
                       remarkPlugins={[remarkMath, remarkGfm]}
                       rehypePlugins={[rehypeKatex]}
                       components={{
-                        code({ node, inline, className, children, ...props }) {
+                        code({ node, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
+                          const isInline = !match;
+                          if (isInline) {
+                            return (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+
+                          const { ref: _rmRef, ...sanitizedProps } = props as any;
+
+                          return (
                             <SyntaxHighlighter
-                              children={String(children).replace(/\n$/, '')}
                               style={materialDark}
-                              language={match[1]}
+                              language={match ? match : [1]}
                               PreTag="div"
-                              {...props}
-                            />
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
+                              {...sanitizedProps}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
                           );
                         },
                         table({ children }) {
@@ -622,7 +629,9 @@ export default function PlayerPage() {
                           return <td className="table-cell">{children}</td>;
                         }
                       }}
-                    />
+                    >
+                      {preprocessMathContent(videoInfo.answer)}
+                    </ReactMarkdown>
                   </div>
                 </div>
               </div>
