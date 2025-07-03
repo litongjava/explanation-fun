@@ -5,6 +5,14 @@ import DPlayer from 'dplayer';
 import Hls from 'hls.js';
 import './PlayerPage.css';
 import { sendVideoSSERequest, type SSEEvent } from '../client/SSEClient.ts';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { materialDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// 添加数学公式和表格支持
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import 'katex/dist/katex.min.css';
 
 // 默认封面URL
 const DEFAULT_COVER_URL = 'https://via.placeholder.com/800x450?text=Video+Cover';
@@ -25,6 +33,28 @@ interface SSERouteParams {
   language: string;
   user_id: string;
 }
+
+// 在您的 PlayerPage.tsx 文件顶部添加预处理函数
+const preprocessMathContent = (content: string): string => {
+  if (!content) return content;
+
+  let processed = content;
+
+  // 将 \( \) 转换为 $ $
+  processed = processed.replace(/\\\((.*?)\\\)/g, '$$$1$$');
+
+  // 将 \[ \] 转换为 $$ $$
+  processed = processed.replace(/\\\[(.*?)\\\]/gs, '$$$$\n$1\n$$$$');
+
+  // 处理常见的LaTeX数学环境
+  const mathEnvironments = ['equation', 'align', 'gather', 'multline', 'split', 'cases'];
+  mathEnvironments.forEach(env => {
+    const regex = new RegExp(`\\\\begin\\{${env}\\}(.*?)\\\\end\\{${env}\\}`, 'gs');
+    processed = processed.replace(regex, `$$\n\\\\begin{${env}}$1\\\\end{${env}}\n$$`);
+  });
+
+  return processed;
+};
 
 export default function PlayerPage() {
   const { id: routeId } = useParams<{ id: string }>();
@@ -47,12 +77,21 @@ export default function PlayerPage() {
   const [heartbeatElapsed, setHeartbeatElapsed] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'info' | 'answer' | 'transcript'>('info');
   const [selectedProvider, setSelectedProvider] = useState(sseParams?.provider || 'openai');
+  const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const hasSubscribed = useRef(false);
 
   // 确保封面URL有效
   const getSafeCoverUrl = (url: string | null | undefined): string => {
     return url && url.trim() !== '' ? url : DEFAULT_COVER_URL;
+  };
+
+  // 复制文本到剪贴板
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedItems(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => setCopiedItems(prev => ({ ...prev, [key]: false })), 2000);
+    });
   };
 
   // 倒计时和总耗时计时器
@@ -483,27 +522,45 @@ export default function PlayerPage() {
                   <h3>视频信息</h3>
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>视频地址</label>
+                      <div className="info-header">
+                        <label>视频地址</label>
+                        <button
+                          className="copy-button"
+                          onClick={() => copyToClipboard(videoInfo.videoUrl, 'videoUrl')}
+                        >
+                          {copiedItems['videoUrl'] ? '✓ 已复制' : '复制'}
+                        </button>
+                      </div>
                       <a
                         href={videoInfo.videoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-link"
+                        style={{ wordBreak: 'break-all' }}
                       >
-                        {videoInfo.videoUrl.substring(0, 40)}...
+                        {videoInfo.videoUrl}
                       </a>
                     </div>
                     <div className="info-item">
-                      <label>封面地址</label>
+                      <div className="info-header">
+                        <label>封面地址</label>
+                        <button
+                          className="copy-button"
+                          onClick={() => copyToClipboard(videoInfo.coverUrl, 'coverUrl')}
+                        >
+                          {copiedItems['coverUrl'] ? '✓ 已复制' : '复制'}
+                        </button>
+                      </div>
                       <a
                         href={videoInfo.coverUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-link"
+                        style={{ wordBreak: 'break-all' }}
                       >
                         {videoInfo.coverUrl === DEFAULT_COVER_URL
                           ? "默认封面"
-                          : videoInfo.coverUrl.substring(0, 40) + '...'}
+                          : videoInfo.coverUrl}
                       </a>
                     </div>
                     {isDev && sseParams && (
@@ -520,9 +577,52 @@ export default function PlayerPage() {
             {activeTab === 'answer' && (
               <div className="tab-panel answer-panel">
                 <div className="answer-card">
-                  <h3>答案文本</h3>
+                  <div className="answer-header">
+                    <h3>答案文本</h3>
+                    <button
+                      className="copy-button"
+                      onClick={() => copyToClipboard(videoInfo.answer, 'answer')}
+                    >
+                      {copiedItems['answer'] ? '✓ 已复制' : '复制'}
+                    </button>
+                  </div>
                   <div className="answer-content">
-                    {videoInfo.answer}
+                    <ReactMarkdown
+                      children={preprocessMathContent(videoInfo.answer)}
+                      remarkPlugins={[remarkMath, remarkGfm]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              children={String(children).replace(/\n$/, '')}
+                              style={materialDark}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            />
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        table({ children }) {
+                          return (
+                            <div className="table-container">
+                              <table className="markdown-table">{children}</table>
+                            </div>
+                          );
+                        },
+                        th({ children }) {
+                          return <th className="table-header">{children}</th>;
+                        },
+                        td({ children }) {
+                          return <td className="table-cell">{children}</td>;
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -531,7 +631,15 @@ export default function PlayerPage() {
             {activeTab === 'transcript' && (
               <div className="tab-panel transcript-panel">
                 <div className="transcript-card">
-                  <h3>视频字幕</h3>
+                  <div className="transcript-header">
+                    <h3>视频字幕</h3>
+                    <button
+                      className="copy-button"
+                      onClick={() => copyToClipboard(videoInfo.transcript.join('\n'), 'transcript')}
+                    >
+                      {copiedItems['transcript'] ? '✓ 已复制' : '复制'}
+                    </button>
+                  </div>
                   <ul className="transcript-list">
                     {videoInfo.transcript.map((line, idx) => (
                       <li key={idx} className="transcript-item">

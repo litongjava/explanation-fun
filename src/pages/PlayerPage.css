@@ -480,3 +480,126 @@
     padding-top: 56.25%; /* 保持16:9宽高比 */
   }
 }
+
+/* 添加到 PlayerPage.css 中 */
+
+/* 复制按钮样式 */
+.copy-button {
+  background: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+
+.copy-button:hover {
+  background: #cbd5e1;
+}
+
+/* 信息头部样式 */
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* 答案内容样式 */
+.answer-content {
+  line-height: 1.6;
+  font-size: 16px;
+  color: #334155;
+  white-space: pre-wrap;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 字幕头部样式 */
+.transcript-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* 表格容器 */
+.table-container {
+  overflow-x: auto;
+  margin: 16px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 表格样式 */
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 表头样式 */
+.table-header {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  white-space: nowrap;
+}
+
+/* 表格单元格 */
+.table-cell {
+  border: 1px solid #dee2e6;
+  padding: 12px 16px;
+  vertical-align: top;
+  color: #212529;
+}
+
+/* 表格条纹效果 */
+.markdown-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* 表格悬停效果 */
+.markdown-table tbody tr:hover {
+  background-color: #e9ecef;
+}
+
+/* 数学公式样式优化 */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0;
+}
+
+.katex {
+  font-size: 1.1em;
+}
+
+/* 响应式表格 */
+@media (max-width: 768px) {
+  .table-container {
+    margin: 12px -16px;
+    border-radius: 0;
+  }
+
+  .table-header,
+  .table-cell {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .markdown-table {
+    font-size: 13px;
+  }
+}
