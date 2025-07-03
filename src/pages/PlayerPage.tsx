@@ -38,7 +38,7 @@ export default function PlayerPage() {
 
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [videoId, setVideoId] = useState<string | null>(routeId || null);
-  const [countdown, setCountdown] = useState(180); // 3分钟
+  const [countdown, setCountdown] = useState(240); // 4分钟
   const [pastThreeMinutes, setPastThreeMinutes] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [progressList, setProgressList] = useState<string[]>([]);
