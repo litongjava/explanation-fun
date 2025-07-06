@@ -78,6 +78,8 @@ export default function PlayerPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'answer' | 'transcript'>('info');
   const [selectedProvider, setSelectedProvider] = useState(sseParams?.provider || 'openai');
   const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
+  const [sseError, setSseError] = useState<string | null>(null);
+
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const hasSubscribed = useRef(false);
 
@@ -163,14 +165,27 @@ export default function PlayerPage() {
         ...params,
         onEvent: (event: SSEEvent) => {
           // 心跳事件
-          if (event.type === 'heartbeat') {
+          if (event.type === 'error') {
+            try {
+              const errorData = JSON.parse(event.data);
+              setSseError(errorData.error || "视频生成失败");
+
+            } catch (e) {
+              setSseError("视频生成过程中发生错误");
+            }
+            setIsSSEDone(true);
+            return;
+          } else if(event.type === '401'){
+            const errorData = JSON.parse(event.data);
+            setSseError(errorData.msg || "积分不足，请充值后再试");
+          }
+          else if (event.type === 'heartbeat') {
             setLastHeartbeatTime(Date.now());
             setHeartbeatElapsed(0);
             return;
           }
-
           // 进度更新
-          if (event.type === 'progress') {
+          else if (event.type === 'progress') {
             try {
               const payload = JSON.parse(event.data) as { info: string };
               setProgressList(prev => [...prev, payload.info]);
@@ -181,7 +196,7 @@ export default function PlayerPage() {
           }
 
           // 收到ID
-          if (event.type === 'task' || event.type === 'metadata') {
+          else if (event.type === 'task' || event.type === 'metadata') {
             try {
               const payload = JSON.parse(event.data) as { id: string };
               setVideoId(payload.id);
@@ -193,7 +208,7 @@ export default function PlayerPage() {
           }
 
           // 收到播放URL
-          if (event.type === 'main') {
+          else if (event.type === 'main') {
             try {
               const payload = JSON.parse(event.data) as { url: string };
               setVideoInfo(prev => ({
@@ -210,7 +225,7 @@ export default function PlayerPage() {
           }
 
           // SSE完成
-          if (event.type === 'done') {
+          else if (event.type === 'done') {
             sseReaderRef.current = null;
             setIsSSEDone(true);
           }
@@ -323,6 +338,32 @@ export default function PlayerPage() {
 
   // 渲染不同状态下的UI
   const renderContent = () => {
+    if (sseError) {
+      return (
+        <div className="player-page error-view">
+          <div className="error-card">
+            <h2>发生错误</h2>
+            <p>{sseError}</p>
+            {sseError.includes("积分不足") && (
+              <button
+                onClick={() => navigate('/recharge')}
+                className="primary-button"
+                style={{ marginTop: '15px' }}
+              >
+                立即充值
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/')}
+              className="primary-button"
+              style={{ marginTop: '10px' }}
+            >
+              返回首页
+            </button>
+          </div>
+        </div>
+      );
+    }
     // 1) 缺少必要参数
     if (!videoId && !sseParams) {
       return (
