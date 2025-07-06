@@ -200,7 +200,7 @@ export default function PlayerPage() {
             try {
               const payload = JSON.parse(event.data) as { id: string };
               setVideoId(payload.id);
-              window.history.replaceState({}, '', `/player/${payload.id}`);
+              window.history.replaceState({}, '', `#/player/${payload.id}`);
             } catch (e) {
               console.error('解析ID失败:', e);
             }
