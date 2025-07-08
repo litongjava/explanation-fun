@@ -2,16 +2,25 @@
 import {HashRouter, Route, Routes} from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import PlayerPage from './pages/PlayerPage';
+import Footer from "./componment/Footer.tsx";
+
 
 function App() {
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<HomePage/>}/>
-        {/* 路由中包含 video id 参数 */}
-        <Route path="/player/:id?" element={<PlayerPage/>}/>
-      </Routes>
-    </HashRouter>
+    <div style={{
+      position: 'relative',
+      minHeight: '100vh',
+      paddingBottom: '50px',
+      fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif"
+    }}>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/player/:id?" element={<PlayerPage />} />
+        </Routes>
+      </HashRouter>
+      <Footer />
+    </div>
   );
 }
 

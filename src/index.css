@@ -11,3 +11,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
   monospace;
 }
+
+.footer-link:hover {
+  color: #7c3aed !important;
+  text-decoration: underline !important;
+  transform: translateY(-1px);
+}
