@@ -4,6 +4,17 @@ import './HomePage.css';
 import type {ParsedImageResponse, VideoItem} from '../type/type';
 import {UserIdConst} from '../type/UserIdConst.ts';
 
+const VideoSkeleton = () => (
+  <div className="video-item skeleton">
+    <div className="video-thumbnail skeleton-thumbnail">
+      <div className="skeleton-shimmer"></div>
+    </div>
+    <div className="video-title skeleton-title">
+      <div className="skeleton-shimmer"></div>
+    </div>
+  </div>
+);
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string>('');
@@ -21,14 +32,15 @@ export default function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDevEnv, setIsDevEnv] = useState(false);
 
-  // 新增：导航栏数据
   const [navData, setNavData] = useState<{ [key: string]: string }>({});
+  const [videosLoading, setVideosLoading] = useState<boolean>(true);
+  const [navLoading, setNavLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // 检查是否为开发环境
     setIsDevEnv(localStorage.getItem('app.env') === 'dev');
 
     const offset = page - 1;
+    setVideosLoading(true);  // 添加这行
     fetch(
       import.meta.env.VITE_BACKEND_BASE_URL +
       `/api/v1/video/recommends?offset=${offset}&limit=${limit}&sort_by=recent`
@@ -44,11 +56,14 @@ export default function HomePage() {
       })
       .catch((err) => {
         console.error('获取推荐视频失败:', err);
+      })
+      .finally(() => {
+        setVideosLoading(false);  // 添加这行
       });
   }, [page]);
 
-  // 新增：获取导航栏数据
   useEffect(() => {
+    setNavLoading(true);
     fetch(import.meta.env.VITE_BACKEND_BASE_URL + '/api/v1/nav')
       .then((res) => res.json())
       .then((data) => {
@@ -56,7 +71,10 @@ export default function HomePage() {
           setNavData(data.data);
         }
       })
-      .catch((err) => console.error('获取导航失败:', err));
+      .catch((err) => console.error('获取导航失败:', err))
+      .finally(() => {
+        setNavLoading(false);  // 添加这行
+      });
   }, []);
 
   useEffect(() => {
@@ -161,13 +179,25 @@ export default function HomePage() {
         <div className="site-bar">
           {/* 动态导航：来自 /api/v1/nav */}
           <ul className="site-nav">
-            {Object.entries(navData).map(([text, link]) => (
-              <li key={text}>
-                <a className="nav-item" href={`https://${link}`} target="_blank" rel="noopener noreferrer">
-                  {text}
-                </a>
-              </li>
-            ))}
+            {navLoading ? (
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <li key={i}>
+                    <div className="nav-item skeleton-nav">
+                      <div className="skeleton-shimmer"></div>
+                    </div>
+                  </li>
+                ))}
+              </>
+            ) : (
+              Object.entries(navData).map(([text, link]) => (
+                <li key={text}>
+                  <a className="nav-item" href={`https://${link}`} target="_blank" rel="noopener noreferrer">
+                    {text}
+                  </a>
+                </li>
+              ))
+            )}
           </ul>
         </div>
       </header>
@@ -253,22 +283,26 @@ export default function HomePage() {
       </div>
 
       <div className="videos-grid">
-        {videos.map((video) => (
-          <div
-            key={video.id}
-            className="video-item"
-            onClick={() => handlePlayVideo(video)}
-          >
-            <div className="video-thumbnail">
-              <img
-                src={video.cover_url}
-                alt={video.title}
-              />
-              <div className="play-icon">▶</div>
+        {videosLoading ? (
+          Array.from({length: limit}).map((_, i) => <VideoSkeleton key={i}/>)
+        ) : (
+          videos.map((video) => (
+            <div
+              key={video.id}
+              className="video-item"
+              onClick={() => handlePlayVideo(video)}
+            >
+              <div className="video-thumbnail">
+                <img
+                  src={video.cover_url}
+                  alt={video.title}
+                />
+                <div className="play-icon">▶</div>
+              </div>
+              <p className="video-title">{video.title}</p>
             </div>
-            <p className="video-title">{video.title}</p>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       <div className="pagination">

@@ -414,3 +414,60 @@
     min-width: auto;
   }
 }
+
+/* 骨架屏加载动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  pointer-events: none;
+}
+
+.skeleton-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+          90deg,
+          #f0f0f0 0%,
+          #e0e0e0 20%,
+          #f0f0f0 40%,
+          #f0f0f0 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.skeleton-thumbnail {
+  background: #f0f0f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-title {
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin: 8px;
+  height: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-nav {
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 4px;
+  width: 80px;
+  height: 20px;
+  position: relative;
+  overflow: hidden;
+  display: block;
+  padding: 15px 20px;
+}
