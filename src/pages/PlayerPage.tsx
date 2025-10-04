@@ -1,7 +1,7 @@
 // src/pages/PlayerPage.tsx
 import {useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
-import DPlayer from 'dplayer';
+import DPlayer, {type DPlayerOptions} from 'dplayer';
 import Hls from 'hls.js';
 import './PlayerPage.css';
 import {sendVideoSSERequest, type SSEEvent} from '../client/SSEClient.ts';
@@ -299,7 +299,7 @@ export default function PlayerPage() {
       window.Hls = Hls;
     }
 
-    let options = {
+    let options: DPlayerOptions = {
       container: containerRef.current!,
       autoplay: false,
       preload: 'auto',
