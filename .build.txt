@@ -1,0 +1,8 @@
+[win.build]
+pnpm build
+
+[linux.build]
+pnpm build
+
+[mac.build]
+pnpm build

@@ -10,7 +10,7 @@
 
 /* 导航栏样式 */
 .site-header {
-  margin: -20px -20px 30px -20px;
+  margin: -20px -20px 10px -20px;
   padding: 0 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -89,14 +89,15 @@
 
 .app-title {
   color: #2563eb;
-  margin-bottom: 25px;
+  margin-top: 0px;
+  margin-bottom: 0px;
   font-size: 2.2rem;
   text-align: center;
   font-weight: 700;
   background: linear-gradient(90deg, #2563eb, #7c3aed);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  padding-bottom: 10px;
+  padding-bottom: 5px;
   border-bottom: 2px solid #e2e8f0;
 }
 
