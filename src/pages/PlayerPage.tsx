@@ -327,6 +327,8 @@ export default function PlayerPage() {
       options.subtitle = {
         url: videoInfo.subtitle_url,
         type: 'webvtt',
+        fontSize: '25px',
+        bottom: '10%',
         color: '#000'
       }
     }
