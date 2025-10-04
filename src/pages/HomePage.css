@@ -8,6 +8,85 @@
   color: #334155;
 }
 
+/* 导航栏样式 */
+.site-header {
+  margin: -20px -20px 30px -20px;
+  padding: 0 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.site-bar {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.site-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.site-nav li {
+  margin: 0;
+}
+
+.nav-item {
+  display: block;
+  padding: 15px 20px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  position: relative;
+  border-radius: 4px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: white;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-item:hover::after {
+  transform: scaleX(1);
+}
+
+@media (max-width: 768px) {
+  .site-header {
+    margin: -15px -15px 20px -15px;
+    padding: 0 15px;
+  }
+
+  .site-nav {
+    gap: 0;
+  }
+
+  .nav-item {
+    padding: 12px 15px;
+    font-size: 0.9rem;
+  }
+
+  .nav-item::after {
+    left: 15px;
+    right: 15px;
+  }
+}
+
 .app-title {
   color: #2563eb;
   margin-bottom: 25px;

@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useEffect, useState, useRef} from 'react';
+import {useNavigate} from 'react-router-dom';
 import './HomePage.css';
-import type { ParsedImageResponse, VideoItem } from '../type/type';
-import { UserIdConst } from '../type/UserIdConst.ts';
+import type {ParsedImageResponse, VideoItem} from '../type/type';
+import {UserIdConst} from '../type/UserIdConst.ts';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -20,6 +20,9 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDevEnv, setIsDevEnv] = useState(false);
+
+  // 新增：导航栏数据
+  const [navData, setNavData] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     // 检查是否为开发环境
@@ -44,11 +47,24 @@ export default function HomePage() {
       });
   }, [page]);
 
+  // 新增：获取导航栏数据
+  useEffect(() => {
+    fetch(import.meta.env.VITE_BACKEND_BASE_URL + '/api/v1/nav')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === 1 && data.ok && data.data) {
+          setNavData(data.data);
+        }
+      })
+      .catch((err) => console.error('获取导航失败:', err));
+  }, []);
+
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
 
   const handlePlayVideo = (video: VideoItem) => {
     navigate(`/player/${video.id}`, {
@@ -91,7 +107,7 @@ export default function HomePage() {
     try {
       const response = await fetch(
         import.meta.env.VITE_BACKEND_BASE_URL + '/api/v1/file/parse',
-        { method: 'POST', body: formData }
+        {method: 'POST', body: formData}
       );
       const result = await response.json();
 
@@ -140,6 +156,21 @@ export default function HomePage() {
 
   return (
     <div className="homepage-container">
+      {/* 新增导航栏 */}
+      <header className="site-header">
+        <div className="site-bar">
+          {/* 动态导航：来自 /api/v1/nav */}
+          <ul className="site-nav">
+            {Object.entries(navData).map(([text, link]) => (
+              <li key={text}>
+                <a className="nav-item" href={`https://${link}`} target="_blank" rel="noopener noreferrer">
+                  {text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </header>
       <h1 className="app-title">Teach Me Anything</h1>
 
       <div className="controls-section">
@@ -178,7 +209,7 @@ export default function HomePage() {
             accept="image/*"
             onChange={handleFileChange}
             ref={fileInputRef}
-            style={{ display: 'none' }}
+            style={{display: 'none'}}
           />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -188,7 +219,7 @@ export default function HomePage() {
           </button>
           {previewUrl && (
             <div className="image-preview">
-              <img src={previewUrl} alt="预览" />
+              <img src={previewUrl} alt="预览"/>
             </div>
           )}
         </div>

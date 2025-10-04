@@ -6,7 +6,6 @@ export default function Footer() {
       backgroundColor: '#f8fafc',
       borderTop: '1px solid #e2e8f0',
       fontSize: '0.9rem',
-      position: 'fixed',
       bottom: 0,
       left: 0,
       right: 0,
