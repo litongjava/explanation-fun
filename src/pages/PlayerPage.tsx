@@ -1,13 +1,13 @@
 // src/pages/PlayerPage.tsx
-import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import {useEffect, useRef, useState} from 'react';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import DPlayer from 'dplayer';
 import Hls from 'hls.js';
 import './PlayerPage.css';
-import { sendVideoSSERequest, type SSEEvent } from '../client/SSEClient.ts';
+import {sendVideoSSERequest, type SSEEvent} from '../client/SSEClient.ts';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { materialDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
+import {materialDark} from 'react-syntax-highlighter/dist/esm/styles/prism';
 // 添加数学公式和表格支持
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -15,11 +15,12 @@ import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
 
 // 默认封面URL
-const DEFAULT_COVER_URL = 'https://via.placeholder.com/800x450?text=Video+Cover';
+const DEFAULT_COVER_URL = 'https://i.loli.net/2019/06/06/5cf8c5d9c57b510947.png';
 
 interface VideoInfo {
   videoUrl: string;
   coverUrl: string;
+  subtitle_url?: string
   title: string;
   answer: string;
   transcript: string[];
@@ -57,7 +58,7 @@ const preprocessMathContent = (content: string): string => {
 };
 
 export default function PlayerPage() {
-  const { id: routeId } = useParams<{ id: string }>();
+  const {id: routeId} = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const isDev = localStorage.getItem('app.env') === 'dev';
@@ -91,8 +92,8 @@ export default function PlayerPage() {
   // 复制文本到剪贴板
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      setCopiedItems(prev => ({ ...prev, [key]: true }));
-      setTimeout(() => setCopiedItems(prev => ({ ...prev, [key]: false })), 2000);
+      setCopiedItems(prev => ({...prev, [key]: true}));
+      setTimeout(() => setCopiedItems(prev => ({...prev, [key]: false})), 2000);
     });
   };
 
@@ -141,6 +142,7 @@ export default function PlayerPage() {
           setVideoInfo({
             videoUrl: data.video_url,
             coverUrl: getSafeCoverUrl(data.cover_url), // 使用安全封面URL
+            subtitle_url: data.subtitle_url,
             title: data.title || 'Video',
             answer: data.answer || '',
             transcript: Array.isArray(data.transcript) ? data.transcript : [],
@@ -175,11 +177,10 @@ export default function PlayerPage() {
             }
             setIsSSEDone(true);
             return;
-          } else if(event.type === '401'){
+          } else if (event.type === '401') {
             const errorData = JSON.parse(event.data);
             setSseError(errorData.msg || "积分不足，请充值后再试");
-          }
-          else if (event.type === 'heartbeat') {
+          } else if (event.type === 'heartbeat') {
             setLastHeartbeatTime(Date.now());
             setHeartbeatElapsed(0);
             return;
@@ -243,7 +244,7 @@ export default function PlayerPage() {
     if (!shouldPoll) return;
 
     const pollInterval = 5000;
-    const timerRef = { current: 0 as number };
+    const timerRef = {current: 0 as number};
 
     async function tryFetch() {
       try {
@@ -259,6 +260,7 @@ export default function PlayerPage() {
             setVideoInfo({
               videoUrl: data.video_url,
               coverUrl: getSafeCoverUrl(data.cover_url), // 使用安全封面URL
+              subtitle_url: data.subtitle_url,
               title: data.title || 'Video',
               answer: data.answer || '',
               transcript: Array.isArray(data.transcript) ? data.transcript : [],
@@ -297,10 +299,11 @@ export default function PlayerPage() {
       window.Hls = Hls;
     }
 
-    dpRef.current = new DPlayer({
+    let options = {
       container: containerRef.current!,
       autoplay: false,
       preload: 'auto',
+      screenshot: true,
       video: {
         url: videoInfo.videoUrl,
         pic: videoInfo.coverUrl, // 确保封面URL有效
@@ -317,13 +320,31 @@ export default function PlayerPage() {
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: 10,
         },
-      },
-    });
+      }
+
+    };
+    if (videoInfo.subtitle_url) {
+      options.subtitle = {
+        url: videoInfo.subtitle_url,
+        type: 'webvtt',
+        color: '#000'
+      }
+    }
+
+
+    dpRef.current = new DPlayer(options);
 
     if (videoType === 'hls' && dpRef.current.video) {
       dpRef.current.video.addEventListener('loadedmetadata', () => {
+        if (dpRef.current.video.textTracks.length > 0) {
+          const track = dpRef.current.video.textTracks[0];
+          console.log('字幕轨道模式:', track.mode);
+          // 强制显示字幕
+          track.mode = 'showing';
+        }
         dpRef.current.video.currentTime = 0.1;
         dpRef.current.play();
+
       });
     }
 
@@ -348,7 +369,7 @@ export default function PlayerPage() {
               <button
                 onClick={() => navigate('/recharge')}
                 className="primary-button"
-                style={{ marginTop: '15px' }}
+                style={{marginTop: '15px'}}
               >
                 立即充值
               </button>
@@ -356,7 +377,7 @@ export default function PlayerPage() {
             <button
               onClick={() => navigate('/')}
               className="primary-button"
-              style={{ marginTop: '10px' }}
+              style={{marginTop: '10px'}}
             >
               返回首页
             </button>
@@ -398,7 +419,7 @@ export default function PlayerPage() {
             <div className="progress-bar">
               <div
                 className="progress-fill"
-                style={{ width: `${((180 - countdown) / 180) * 100}%` }}
+                style={{width: `${((180 - countdown) / 180) * 100}%`}}
               ></div>
             </div>
 
@@ -439,7 +460,7 @@ export default function PlayerPage() {
                 {progressList.map((info, idx) => (
                   <div key={idx} className="log-entry">
                     <span className="log-time">
-                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                     </span>
                     {info}
                   </div>
@@ -577,7 +598,7 @@ export default function PlayerPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-link"
-                        style={{ wordBreak: 'break-all' }}
+                        style={{wordBreak: 'break-all'}}
                       >
                         {videoInfo.videoUrl}
                       </a>
@@ -597,7 +618,7 @@ export default function PlayerPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="info-link"
-                        style={{ wordBreak: 'break-all' }}
+                        style={{wordBreak: 'break-all'}}
                       >
                         {videoInfo.coverUrl === DEFAULT_COVER_URL
                           ? "默认封面"
@@ -632,7 +653,7 @@ export default function PlayerPage() {
                       remarkPlugins={[remarkMath, remarkGfm]}
                       rehypePlugins={[rehypeKatex]}
                       components={{
-                        code({ node, className, children, ...props }) {
+                        code({node, className, children, ...props}) {
                           const match = /language-(\w+)/.exec(className || '');
                           const isInline = !match;
                           if (isInline) {
@@ -643,7 +664,7 @@ export default function PlayerPage() {
                             );
                           }
 
-                          const { ref: _rmRef, ...sanitizedProps } = props as any;
+                          const {ref: _rmRef, ...sanitizedProps} = props as any;
 
                           return (
                             <SyntaxHighlighter
@@ -656,17 +677,17 @@ export default function PlayerPage() {
                             </SyntaxHighlighter>
                           );
                         },
-                        table({ children }) {
+                        table({children}) {
                           return (
                             <div className="table-container">
                               <table className="markdown-table">{children}</table>
                             </div>
                           );
                         },
-                        th({ children }) {
+                        th({children}) {
                           return <th className="table-header">{children}</th>;
                         },
-                        td({ children }) {
+                        td({children}) {
                           return <td className="table-cell">{children}</td>;
                         }
                       }}
