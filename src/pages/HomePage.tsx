@@ -40,7 +40,7 @@ export default function HomePage() {
     setIsDevEnv(localStorage.getItem('app.env') === 'dev');
 
     const offset = page - 1;
-    setVideosLoading(true);  // 添加这行
+    setVideosLoading(true);
     fetch(
       import.meta.env.VITE_BACKEND_BASE_URL +
       `/api/v1/video/recommends?offset=${offset}&limit=${limit}&sort_by=recent`
@@ -51,14 +51,14 @@ export default function HomePage() {
           setVideos(data.data.videos);
           setTotal(data.data.total);
         } else {
-          console.error('获取推荐视频返回错误：', data);
+          console.error('Error retrieving recommended videos:', data);
         }
       })
       .catch((err) => {
-        console.error('获取推荐视频失败:', err);
+        console.error('Failed to fetch recommended videos:', err);
       })
       .finally(() => {
-        setVideosLoading(false);  // 添加这行
+        setVideosLoading(false);
       });
   }, [page]);
 
@@ -71,9 +71,9 @@ export default function HomePage() {
           setNavData(data.data);
         }
       })
-      .catch((err) => console.error('获取导航失败:', err))
+      .catch((err) => console.error('Failed to fetch navigation:', err))
       .finally(() => {
-        setNavLoading(false);  // 添加这行
+        setNavLoading(false);
       });
   }, []);
 
@@ -154,7 +154,7 @@ export default function HomePage() {
 
   const handleGenerateVideo = () => {
     if (!conceptText.trim()) {
-      setError('请输入主题');
+      setError('Please enter a topic');
       return;
     }
     setError('');
@@ -174,10 +174,10 @@ export default function HomePage() {
 
   return (
     <div className="homepage-container">
-      {/* 新增导航栏 */}
+      {/* Navigation bar */}
       <header className="site-header">
         <div className="site-bar">
-          {/* 动态导航：来自 /api/v1/nav */}
+          {/* Dynamic navigation from /api/v1/nav */}
           <ul className="site-nav">
             {navLoading ? (
               <>
@@ -205,13 +205,13 @@ export default function HomePage() {
 
       <div className="controls-section">
         <div className="select-group">
-          <label htmlFor="language-select">语言:</label>
+          <label htmlFor="language-select">Language:</label>
           <select
             id="language-select"
             value={selectedLanguage}
             onChange={handleLanguageChange}
           >
-            <option value="zh-CN">简体中文</option>
+            <option value="zh-CN">Simplified Chinese</option>
             <option value="en-US">English</option>
             <option value="es-ES">Español</option>
           </select>
@@ -245,11 +245,11 @@ export default function HomePage() {
             onClick={() => fileInputRef.current?.click()}
             className="upload-button"
           >
-            {selectedFile ? '更换图片' : '上传图片'}
+            {selectedFile ? 'Change Image' : 'Upload Image'}
           </button>
           {previewUrl && (
             <div className="image-preview">
-              <img src={previewUrl} alt="预览"/>
+              <img src={previewUrl} alt="Preview"/>
             </div>
           )}
         </div>
@@ -259,26 +259,26 @@ export default function HomePage() {
           className="generate-button"
           disabled={isLoading || loading}
         >
-          {loading ? '正在生成...' : '生成视频'}
+          {loading ? 'Generating...' : 'Generate Video'}
         </button>
       </div>
 
       <div className="concept-input-section">
         <textarea
-          placeholder="描述想要讲解的技术概念 (或上传图片自动填充)"
+          placeholder="Describe the technical concept you want explained (or upload an image to auto-fill)"
           value={conceptText}
           onChange={(e) => setConceptText(e.target.value)}
           rows={4}
         />
       </div>
 
-      {isLoading && <p className="loading-message">图片解析中，请稍候...</p>}
+      {isLoading && <p className="loading-message">Parsing image, please wait...</p>}
       {error && <p className="error-message">{error}</p>}
 
       <div className="section-header">
-        <h2>历史视频</h2>
+        <h2>Video History</h2>
         <div className="pagination-info">
-          第 {page} 页，共 {totalPages} 页
+          Page {page} of {totalPages}
         </div>
       </div>
 
@@ -307,10 +307,10 @@ export default function HomePage() {
 
       <div className="pagination">
         <button onClick={handlePreviousPage} disabled={page === 1}>
-          上一页
+          Previous
         </button>
         <button onClick={handleNextPage} disabled={page === totalPages}>
-          下一页
+          Next
         </button>
       </div>
     </div>

@@ -8,13 +8,13 @@ import {sendVideoSSERequest, type SSEEvent} from '../client/SSEClient.ts';
 import ReactMarkdown from 'react-markdown';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {materialDark} from 'react-syntax-highlighter/dist/esm/styles/prism';
-// 添加数学公式和表格支持
+// Add math formula and table support
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import 'katex/dist/katex.min.css';
 
-// 默认封面URL
+// Default cover URL
 const DEFAULT_COVER_URL = 'https://i.loli.net/2019/06/06/5cf8c5d9c57b510947.png';
 
 interface VideoInfo {
@@ -35,19 +35,19 @@ interface SSERouteParams {
   user_id: string;
 }
 
-// 在您的 PlayerPage.tsx 文件顶部添加预处理函数
+// Add preprocessing function at the top of your PlayerPage.tsx file
 const preprocessMathContent = (content: string): string => {
   if (!content) return content;
 
   let processed = content;
 
-  // 将 \( \) 转换为 $ $
+  // Convert \( \) to $ $
   processed = processed.replace(/\\\((.*?)\\\)/g, '$$$1$$');
 
-  // 将 \[ \] 转换为 $$ $$
+  // Convert \[ \] to $$ $$
   processed = processed.replace(/\\\[(.*?)\\\]/gs, '$$$$\n$1\n$$$$');
 
-  // 处理常见的LaTeX数学环境
+  // Handle common LaTeX math environments
   const mathEnvironments = ['equation', 'align', 'gather', 'multline', 'split', 'cases'];
   mathEnvironments.forEach(env => {
     const regex = new RegExp(`\\\\begin\\{${env}\\}(.*?)\\\\end\\{${env}\\}`, 'gs');
@@ -69,7 +69,7 @@ export default function PlayerPage() {
 
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [videoId, setVideoId] = useState<string | null>(routeId || null);
-  const [countdown, setCountdown] = useState(240); // 4分钟
+  const [countdown, setCountdown] = useState(240); // 4 minutes
   const [pastThreeMinutes, setPastThreeMinutes] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [progressList, setProgressList] = useState<string[]>([]);
@@ -84,12 +84,12 @@ export default function PlayerPage() {
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const hasSubscribed = useRef(false);
 
-  // 确保封面URL有效
+  // Ensure cover URL is valid
   const getSafeCoverUrl = (url: string | null | undefined): string => {
     return url && url.trim() !== '' ? url : DEFAULT_COVER_URL;
   };
 
-  // 复制文本到剪贴板
+  // Copy text to clipboard
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedItems(prev => ({...prev, [key]: true}));
@@ -97,7 +97,7 @@ export default function PlayerPage() {
     });
   };
 
-  // 倒计时和总耗时计时器
+  // Countdown and total elapsed time timer
   useEffect(() => {
     const timer = window.setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
@@ -111,7 +111,7 @@ export default function PlayerPage() {
     if (countdown === 0) setPastThreeMinutes(true);
   }, [countdown]);
 
-  // 心跳计时器
+  // Heartbeat timer
   useEffect(() => {
     if (lastHeartbeatTime === null) return;
 
@@ -122,7 +122,7 @@ export default function PlayerPage() {
     return () => clearInterval(hbTimer);
   }, [lastHeartbeatTime]);
 
-  // 获取视频详情
+  // Fetch video details
   useEffect(() => {
     if (videoId && isSSEDone) {
       fetchVideoDetail(videoId);
@@ -141,7 +141,7 @@ export default function PlayerPage() {
         if (data.video_url) {
           setVideoInfo({
             videoUrl: data.video_url,
-            coverUrl: getSafeCoverUrl(data.cover_url), // 使用安全封面URL
+            coverUrl: getSafeCoverUrl(data.cover_url), // Use safe cover URL
             subtitle_url: data.subtitle_url,
             title: data.title || 'Video',
             answer: data.answer || '',
@@ -150,11 +150,11 @@ export default function PlayerPage() {
         }
       }
     } catch (err) {
-      console.error('获取视频详情出错:', err);
+      console.error('Error fetching video details:', err);
     }
   }
 
-  // 发起SSE请求
+  // Initiate SSE request
   useEffect(() => {
     if (!videoId && sseParams && !hasSubscribed.current) {
       hasSubscribed.current = true;
@@ -166,26 +166,26 @@ export default function PlayerPage() {
       sendVideoSSERequest({
         ...params,
         onEvent: (event: SSEEvent) => {
-          // 心跳事件
+          // Heartbeat event
           if (event.type === 'error') {
             try {
               const errorData = JSON.parse(event.data);
-              setSseError(errorData.error || "视频生成失败");
+              setSseError(errorData.error || "Video generation failed");
 
             } catch (e) {
-              setSseError("视频生成过程中发生错误");
+              setSseError("An error occurred during video generation");
             }
             setIsSSEDone(true);
             return;
           } else if (event.type === '401') {
             const errorData = JSON.parse(event.data);
-            setSseError(errorData.msg || "积分不足，请充值后再试");
+            setSseError(errorData.msg || "Insufficient credits, please recharge and try again");
           } else if (event.type === 'heartbeat') {
             setLastHeartbeatTime(Date.now());
             setHeartbeatElapsed(0);
             return;
           }
-          // 进度更新
+          // Progress update
           else if (event.type === 'progress') {
             try {
               const payload = JSON.parse(event.data) as { info: string };
@@ -196,49 +196,49 @@ export default function PlayerPage() {
             return;
           }
 
-          // 收到ID
+          // Received ID
           else if (event.type === 'task' || event.type === 'metadata') {
             try {
               const payload = JSON.parse(event.data) as { id: string };
               setVideoId(payload.id);
               window.history.replaceState({}, '', `#/player/${payload.id}`);
             } catch (e) {
-              console.error('解析ID失败:', e);
+              console.error('Failed to parse ID:', e);
             }
             return;
           }
 
-          // 收到播放URL
+          // Received playback URL
           else if (event.type === 'main') {
             try {
               const payload = JSON.parse(event.data) as { url: string };
               setVideoInfo(prev => ({
                 videoUrl: payload.url,
-                coverUrl: getSafeCoverUrl(prev?.coverUrl), // 使用安全封面URL
+                coverUrl: getSafeCoverUrl(prev?.coverUrl), // Use safe cover URL
                 title: prev?.title || sseParams.question,
                 answer: '',
                 transcript: [],
               }));
             } catch (e) {
-              console.error('解析播放URL失败:', e);
+              console.error('Failed to parse playback URL:', e);
             }
             return;
           }
 
-          // SSE完成
+          // SSE complete
           else if (event.type === 'done') {
             sseReaderRef.current = null;
             setIsSSEDone(true);
           }
         },
       }).catch(e => {
-        console.error('SSE请求出错:', e);
+        console.error('SSE request error:', e);
         setIsSSEDone(true);
       });
     }
   }, [videoId, sseParams, selectedProvider]);
 
-  // 轮询获取视频信息
+  // Poll for video information
   useEffect(() => {
     const shouldPoll = Boolean(videoId && !videoInfo && (isSSEDone || !sseParams));
     if (!shouldPoll) return;
@@ -259,7 +259,7 @@ export default function PlayerPage() {
             clearInterval(timerRef.current);
             setVideoInfo({
               videoUrl: data.video_url,
-              coverUrl: getSafeCoverUrl(data.cover_url), // 使用安全封面URL
+              coverUrl: getSafeCoverUrl(data.cover_url), // Use safe cover URL
               subtitle_url: data.subtitle_url,
               title: data.title || 'Video',
               answer: data.answer || '',
@@ -268,14 +268,14 @@ export default function PlayerPage() {
           }
         }
       } catch (err) {
-        console.error('轮询获取视频失败:', err);
+        console.error('Failed to poll video:', err);
       }
     }
 
     timerRef.current = window.setInterval(() => {
       if (elapsedSeconds >= 1800) {
         clearInterval(timerRef.current);
-        window.alert('视频生成超时，请联系 litonglinux@qq.com 获取帮助。');
+        window.alert('Video generation timeout. Please contact litonglinux@qq.com for assistance.');
         return;
       }
       if (videoInfo) {
@@ -288,7 +288,7 @@ export default function PlayerPage() {
     return () => clearInterval(timerRef.current);
   }, [videoId, videoInfo, elapsedSeconds, isSSEDone, sseParams]);
 
-  // 初始化播放器
+  // Initialize player
   useEffect(() => {
     if (!videoInfo || !containerRef.current) return;
 
@@ -306,7 +306,7 @@ export default function PlayerPage() {
       screenshot: true,
       video: {
         url: videoInfo.videoUrl,
-        pic: videoInfo.coverUrl, // 确保封面URL有效
+        pic: videoInfo.coverUrl, // Ensure cover URL is valid
         type: videoType,
       },
       pluginOptions: {
@@ -340,8 +340,8 @@ export default function PlayerPage() {
       dpRef.current.video.addEventListener('loadedmetadata', () => {
         if (dpRef.current.video.textTracks.length > 0) {
           const track = dpRef.current.video.textTracks[0];
-          console.log('字幕轨道模式:', track.mode);
-          // 强制显示字幕
+          console.log('Subtitle track mode:', track.mode);
+          // Force show subtitles
           track.mode = 'showing';
         }
         dpRef.current.video.currentTime = 0.1;
@@ -359,21 +359,21 @@ export default function PlayerPage() {
     };
   }, [videoInfo]);
 
-  // 渲染不同状态下的UI
+  // Render UI for different states
   const renderContent = () => {
     if (sseError) {
       return (
         <div className="player-page error-view">
           <div className="error-card">
-            <h2>发生错误</h2>
+            <h2>Error Occurred</h2>
             <p>{sseError}</p>
-            {sseError.includes("积分不足") && (
+            {sseError.includes("Insufficient credits") && (
               <button
                 onClick={() => navigate('/recharge')}
                 className="primary-button"
                 style={{marginTop: '15px'}}
               >
-                立即充值
+                Recharge Now
               </button>
             )}
             <button
@@ -381,36 +381,36 @@ export default function PlayerPage() {
               className="primary-button"
               style={{marginTop: '10px'}}
             >
-              返回首页
+              Back to Home
             </button>
           </div>
         </div>
       );
     }
-    // 1) 缺少必要参数
+    // 1) Missing required parameters
     if (!videoId && !sseParams) {
       return (
         <div className="player-page error-view">
           <div className="error-card">
-            <h2>未找到视频信息</h2>
-            <p>请检查URL或返回首页重新开始</p>
+            <h2>Video Not Found</h2>
+            <p>Please check the URL or return to the homepage to start over</p>
             <button onClick={() => navigate('/')} className="primary-button">
-              返回首页
+              Back to Home
             </button>
           </div>
         </div>
       );
     }
 
-    // 2) 视频生成中（前三分钟）
+    // 2) Video generating (first three minutes)
     if ((!videoInfo && !routeId && sseParams) || (!videoInfo && countdown > 0 && videoId)) {
       return (
         <div className="player-page generating-view">
           <div className="header">
             <button onClick={() => navigate(-1)} className="back-button">
-              ← 返回
+              ← Back
             </button>
-            <h1>视频生成中</h1>
+            <h1>Generating Video</h1>
           </div>
 
           <div className="progress-container">
@@ -426,9 +426,9 @@ export default function PlayerPage() {
             </div>
 
             <div className="status-message">
-              {countdown > 120 ? '准备生成资源...' :
-                countdown > 60 ? '处理视频内容...' :
-                  '合成最终视频...'}
+              {countdown > 120 ? 'Preparing resources...' :
+                countdown > 60 ? 'Processing video content...' :
+                  'Composing final video...'}
             </div>
           </div>
 
@@ -451,13 +451,13 @@ export default function PlayerPage() {
           {!isSSEDone && (
             <div className="heartbeat-info">
               <span className="heartbeat-icon">❤️</span>
-              心跳: {heartbeatElapsed}秒前
+              Heartbeat: {heartbeatElapsed}s ago
             </div>
           )}
 
           {progressList.length > 0 && (
             <div className="progress-log">
-              <h3>生成日志</h3>
+              <h3>Generation Log</h3>
               <div className="log-container">
                 {progressList.map((info, idx) => (
                   <div key={idx} className="log-entry">
@@ -474,35 +474,35 @@ export default function PlayerPage() {
       );
     }
 
-    // 3) 超过三分钟继续后台轮询
+    // 3) After three minutes, continue background polling
     if (!videoInfo && pastThreeMinutes && elapsedSeconds < 1800) {
       return (
         <div className="player-page generating-view">
           <div className="header">
             <button onClick={() => navigate(-1)} className="back-button">
-              ← 返回
+              ← Back
             </button>
-            <h1>后台处理中</h1>
+            <h1>Processing in Background</h1>
           </div>
 
           <div className="waiting-message">
             <div className="spinner"></div>
-            <p>视频仍在生成中，请耐心等待...</p>
+            <p>Video is still being generated, please be patient...</p>
             <p className="elapsed-time">
-              已等待: {Math.floor(elapsedSeconds / 60)}分{elapsedSeconds % 60}秒
+              Waiting time: {Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s
             </p>
           </div>
 
           {!isSSEDone && (
             <div className="heartbeat-info">
               <span className="heartbeat-icon">❤️</span>
-              心跳: {heartbeatElapsed}秒前
+              Heartbeat: {heartbeatElapsed}s ago
             </div>
           )}
 
           {progressList.length > 0 && (
             <div className="progress-log">
-              <h3>生成日志</h3>
+              <h3>Generation Log</h3>
               <div className="log-container">
                 {progressList.map((info, idx) => (
                   <div key={idx} className="log-entry">{info}</div>
@@ -514,24 +514,24 @@ export default function PlayerPage() {
       );
     }
 
-    // 4) 超过30分钟仍未拿到 videoInfo
+    // 4) After 30 minutes still no videoInfo
     if (!videoInfo && elapsedSeconds >= 1800) {
       return (
         <div className="player-page error-view">
           <div className="error-card">
-            <h2>生成超时</h2>
-            <p>视频生成时间超过30分钟，请联系客服获取帮助</p>
+            <h2>Generation Timeout</h2>
+            <p>Video generation exceeded 30 minutes. Please contact customer service for assistance</p>
             <div className="contact-info">
-              <p>邮箱: litonglinux@qq.com</p>
+              <p>Email: litonglinux@qq.com</p>
             </div>
             <button onClick={() => navigate('/')} className="primary-button">
-              返回首页
+              Back to Home
             </button>
           </div>
 
           {progressList.length > 0 && (
             <div className="progress-log">
-              <h3>生成日志</h3>
+              <h3>Generation Log</h3>
               <div className="log-container">
                 {progressList.map((info, idx) => (
                   <div key={idx} className="log-entry">{info}</div>
@@ -543,13 +543,13 @@ export default function PlayerPage() {
       );
     }
 
-    // 5) 成功获取视频信息
+    // 5) Successfully retrieved video information
     if (videoInfo) {
       return (
         <div className="player-page success-view">
           <div className="header">
             <button onClick={() => navigate(-1)} className="back-button">
-              ← 返回
+              ← Back
             </button>
             <h1>{videoInfo.title}</h1>
           </div>
@@ -563,19 +563,19 @@ export default function PlayerPage() {
               className={`tab ${activeTab === 'info' ? 'active' : ''}`}
               onClick={() => setActiveTab('info')}
             >
-              <i className="tab-icon">📋</i> 信息
+              <i className="tab-icon">📋</i> Info
             </button>
             <button
               className={`tab ${activeTab === 'answer' ? 'active' : ''}`}
               onClick={() => setActiveTab('answer')}
             >
-              <i className="tab-icon">💬</i> 答案
+              <i className="tab-icon">💬</i> Answer
             </button>
             <button
               className={`tab ${activeTab === 'transcript' ? 'active' : ''}`}
               onClick={() => setActiveTab('transcript')}
             >
-              <i className="tab-icon">📝</i> 字幕
+              <i className="tab-icon">📝</i> Subtitles
             </button>
           </div>
 
@@ -583,16 +583,16 @@ export default function PlayerPage() {
             {activeTab === 'info' && (
               <div className="tab-panel info-panel">
                 <div className="info-card">
-                  <h3>视频信息</h3>
+                  <h3>Video Information</h3>
                   <div className="info-grid">
                     <div className="info-item">
                       <div className="info-header">
-                        <label>视频地址</label>
+                        <label>Video URL</label>
                         <button
                           className="copy-button"
                           onClick={() => copyToClipboard(videoInfo.videoUrl, 'videoUrl')}
                         >
-                          {copiedItems['videoUrl'] ? '✓ 已复制' : '复制'}
+                          {copiedItems['videoUrl'] ? '✓ Copied' : 'Copy'}
                         </button>
                       </div>
                       <a
@@ -607,12 +607,12 @@ export default function PlayerPage() {
                     </div>
                     <div className="info-item">
                       <div className="info-header">
-                        <label>封面地址</label>
+                        <label>Cover URL</label>
                         <button
                           className="copy-button"
                           onClick={() => copyToClipboard(videoInfo.coverUrl, 'coverUrl')}
                         >
-                          {copiedItems['coverUrl'] ? '✓ 已复制' : '复制'}
+                          {copiedItems['coverUrl'] ? '✓ Copied' : 'Copy'}
                         </button>
                       </div>
                       <a
@@ -623,7 +623,7 @@ export default function PlayerPage() {
                         style={{wordBreak: 'break-all'}}
                       >
                         {videoInfo.coverUrl === DEFAULT_COVER_URL
-                          ? "默认封面"
+                          ? "Default Cover"
                           : videoInfo.coverUrl}
                       </a>
                     </div>
@@ -642,12 +642,12 @@ export default function PlayerPage() {
               <div className="tab-panel answer-panel">
                 <div className="answer-card">
                   <div className="answer-header">
-                    <h3>答案文本</h3>
+                    <h3>Answer Text</h3>
                     <button
                       className="copy-button"
                       onClick={() => copyToClipboard(videoInfo.answer, 'answer')}
                     >
-                      {copiedItems['answer'] ? '✓ 已复制' : '复制'}
+                      {copiedItems['answer'] ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
                   <div className="answer-content">
@@ -705,12 +705,12 @@ export default function PlayerPage() {
               <div className="tab-panel transcript-panel">
                 <div className="transcript-card">
                   <div className="transcript-header">
-                    <h3>视频字幕</h3>
+                    <h3>Video Subtitles</h3>
                     <button
                       className="copy-button"
                       onClick={() => copyToClipboard(videoInfo.transcript.join('\n'), 'transcript')}
                     >
-                      {copiedItems['transcript'] ? '✓ 已复制' : '复制'}
+                      {copiedItems['transcript'] ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>
                   <ul className="transcript-list">
@@ -730,7 +730,7 @@ export default function PlayerPage() {
             <div className="footer-info">
               <div className="heartbeat-info">
                 <span className="heartbeat-icon">❤️</span>
-                心跳: {heartbeatElapsed}秒前
+                Heartbeat: {heartbeatElapsed}s ago
               </div>
               {progressList.length > 0 && (
                 <div className="progress-log">
