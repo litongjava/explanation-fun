@@ -211,7 +211,7 @@ export default function HomePage() {
             value={selectedLanguage}
             onChange={handleLanguageChange}
           >
-            <option value="zh-CN">Simplified Chinese</option>
+            <option value="zh-CN">简体中文</option>
             <option value="en-US">English</option>
             <option value="es-ES">Español</option>
           </select>
