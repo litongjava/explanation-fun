@@ -127,7 +127,7 @@ export default function PlayerPage() {
     if (videoId && isSSEDone) {
       fetchVideoDetail(videoId);
     }
-  }, [videoId, isSSEDone]);
+  }, [videoId]);
 
   async function fetchVideoDetail(id: string) {
     try {
