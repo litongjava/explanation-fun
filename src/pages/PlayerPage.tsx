@@ -323,15 +323,15 @@ export default function PlayerPage() {
       }
 
     };
-    if (videoInfo.subtitle_url) {
-      options.subtitle = {
-        url: videoInfo.subtitle_url,
-        type: 'webvtt',
-        fontSize: '25px',
-        bottom: '2%',
-        color: '#000'
-      }
-    }
+    // if (videoInfo.subtitle_url) {
+    //   options.subtitle = {
+    //     url: videoInfo.subtitle_url,
+    //     type: 'webvtt',
+    //     fontSize: '25px',
+    //     bottom: '2%',
+    //     color: '#000'
+    //   }
+    // }
 
 
     dpRef.current = new DPlayer(options);
