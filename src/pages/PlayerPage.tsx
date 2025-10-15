@@ -250,7 +250,7 @@ export default function PlayerPage() {
             }
             return;
           }
-          // Received video URL (mp4)
+            // Received video URL (mp4)
           // Received video URL (mp4)
           else if (event.type === 'video') {
             try {
@@ -424,14 +424,7 @@ export default function PlayerPage() {
 
     const filename = sanitizeFilename(videoInfo.title || 'video');
     const downloadUrl = `${import.meta.env.VITE_BACKEND_BASE_URL}/video/download/water?path=${encodeURIComponent(videoInfo.mp4Url)}&text=jieti.cc&filename=${encodeURIComponent(filename)}`;
-
-    // 创建隐藏的 a 标签触发下载
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${filename}.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(downloadUrl, '_blank');
   };
 
   // Render UI for different states
