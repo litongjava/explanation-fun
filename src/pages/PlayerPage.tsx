@@ -19,6 +19,7 @@ const DEFAULT_COVER_URL = 'https://i.loli.net/2019/06/06/5cf8c5d9c57b510947.png'
 
 interface VideoInfo {
   videoUrl: string;
+  mp4Url?: string;
   coverUrl: string;
   subtitle_url?: string
   title: string;
@@ -34,6 +35,18 @@ interface SSERouteParams {
   language: string;
   user_id: string;
 }
+
+// 过滤文件名中的特殊字符
+const sanitizeFilename = (filename: string): string => {
+  // 移除或替换不允许的文件名字符
+  return filename
+    .replace(/[<>:"/\\|?*]/g, '') // 移除 Windows 不允许的字符
+    .replace(/[\x00-\x1f\x80-\x9f]/g, '') // 移除控制字符
+    .replace(/^\.+/, '') // 移除开头的点
+    .replace(/\s+/g, '_') // 空格替换为下划线
+    .trim()
+    .slice(0, 200); // 限制长度
+};
 
 // Add preprocessing function at the top of your PlayerPage.tsx file
 const preprocessMathContent = (content: string): string => {
@@ -80,6 +93,7 @@ export default function PlayerPage() {
   const [selectedProvider, setSelectedProvider] = useState(sseParams?.provider || 'openai');
   const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
   const [sseError, setSseError] = useState<string | null>(null);
+  const [pendingTitle, setPendingTitle] = useState<string>('');
 
   const sseReaderRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
   const hasSubscribed = useRef(false);
@@ -141,7 +155,8 @@ export default function PlayerPage() {
         if (data.video_url) {
           setVideoInfo({
             videoUrl: data.video_url,
-            coverUrl: getSafeCoverUrl(data.cover_url), // Use safe cover URL
+            mp4Url: data.mp4_url || undefined,
+            coverUrl: getSafeCoverUrl(data.cover_url),
             subtitle_url: data.subtitle_url,
             title: data.title || 'Video',
             answer: data.answer || '',
@@ -208,23 +223,63 @@ export default function PlayerPage() {
             return;
           }
 
-          // Received playback URL
+          // Received title
+          else if (event.type === 'title') {
+            try {
+              const payload = JSON.parse(event.data) as { title: string };
+              setPendingTitle(payload.title);  // 只暂存 title，不创建 videoInfo
+            } catch (e) {
+              console.error('Failed to parse title:', e);
+            }
+            return;
+          }
+          // Received playback URL (main.m3u8)
           else if (event.type === 'main') {
             try {
               const payload = JSON.parse(event.data) as { url: string };
               setVideoInfo(prev => ({
                 videoUrl: payload.url,
-                coverUrl: getSafeCoverUrl(prev?.coverUrl), // Use safe cover URL
-                title: prev?.title || sseParams.question,
-                answer: '',
-                transcript: [],
+                mp4Url: prev?.mp4Url,  // 保持现有的 mp4Url
+                coverUrl: getSafeCoverUrl(prev?.coverUrl),
+                title: prev?.title || pendingTitle || sseParams.question,
+                answer: prev?.answer || '',
+                transcript: prev?.transcript || [],
               }));
             } catch (e) {
               console.error('Failed to parse playback URL:', e);
             }
             return;
           }
+          // Received video URL (mp4)
+          // Received video URL (mp4)
+          else if (event.type === 'video') {
+            try {
+              const payload = JSON.parse(event.data) as { url: string };
 
+              setVideoInfo(prev => {
+                // 如果已经有 videoInfo（已经在播放），只更新 mp4Url，不触发重新渲染播放器
+                if (prev && prev.videoUrl) {
+                  return {
+                    ...prev,
+                    mp4Url: payload.url,
+                  };
+                }
+
+                // 如果还没有 videoInfo，创建新的（使用 mp4 作为播放源）
+                return {
+                  videoUrl: payload.url,  // 如果 main 还没到，用 mp4 作为播放源
+                  mp4Url: payload.url,
+                  coverUrl: getSafeCoverUrl(prev?.coverUrl),
+                  title: prev?.title || pendingTitle || sseParams.question,
+                  answer: prev?.answer || '',
+                  transcript: prev?.transcript || [],
+                };
+              });
+            } catch (e) {
+              console.error('Failed to parse video URL:', e);
+            }
+            return;
+          }
           // SSE complete
           else if (event.type === 'done') {
             sseReaderRef.current = null;
@@ -240,7 +295,7 @@ export default function PlayerPage() {
 
   // Poll for video information
   useEffect(() => {
-    const shouldPoll = Boolean(videoId && !videoInfo && (isSSEDone || !sseParams));
+    const shouldPoll = Boolean(videoId && !videoInfo?.videoUrl && (isSSEDone || !sseParams));
     if (!shouldPoll) return;
 
     const pollInterval = 5000;
@@ -259,7 +314,8 @@ export default function PlayerPage() {
             clearInterval(timerRef.current);
             setVideoInfo({
               videoUrl: data.video_url,
-              coverUrl: getSafeCoverUrl(data.cover_url), // Use safe cover URL
+              mp4Url: data.mp4_url || undefined,
+              coverUrl: getSafeCoverUrl(data.cover_url),
               subtitle_url: data.subtitle_url,
               title: data.title || 'Video',
               answer: data.answer || '',
@@ -278,7 +334,7 @@ export default function PlayerPage() {
         window.alert('Video generation timeout. Please contact litonglinux@qq.com for assistance.');
         return;
       }
-      if (videoInfo) {
+      if (videoInfo?.videoUrl) {
         clearInterval(timerRef.current);
         return;
       }
@@ -359,6 +415,25 @@ export default function PlayerPage() {
     };
   }, [videoInfo]);
 
+  // 下载视频（带水印）
+  const handleDownload = () => {
+    if (!videoInfo?.mp4Url) {
+      alert('MP4 文件尚未生成，无法下载');
+      return;
+    }
+
+    const filename = sanitizeFilename(videoInfo.title || 'video');
+    const downloadUrl = `${import.meta.env.VITE_BACKEND_BASE_URL}/video/download/water?path=${encodeURIComponent(videoInfo.mp4Url)}&text=jieti.cc&filename=${encodeURIComponent(filename)}`;
+
+    // 创建隐藏的 a 标签触发下载
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${filename}.mp4`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Render UI for different states
   const renderContent = () => {
     if (sseError) {
@@ -403,7 +478,7 @@ export default function PlayerPage() {
     }
 
     // 2) Video generating (first three minutes)
-    if ((!videoInfo && !routeId && sseParams) || (!videoInfo && countdown > 0 && videoId)) {
+    if ((!videoInfo?.videoUrl && !routeId && sseParams) || (!videoInfo?.videoUrl && countdown > 0 && videoId)) {
       return (
         <div className="player-page generating-view">
           <div className="header">
@@ -475,7 +550,7 @@ export default function PlayerPage() {
     }
 
     // 3) After three minutes, continue background polling
-    if (!videoInfo && pastThreeMinutes && elapsedSeconds < 1800) {
+    if (!videoInfo?.videoUrl && pastThreeMinutes && elapsedSeconds < 1800) {
       return (
         <div className="player-page generating-view">
           <div className="header">
@@ -515,7 +590,7 @@ export default function PlayerPage() {
     }
 
     // 4) After 30 minutes still no videoInfo
-    if (!videoInfo && elapsedSeconds >= 1800) {
+    if (!videoInfo?.videoUrl && elapsedSeconds >= 1800) {
       return (
         <div className="player-page error-view">
           <div className="error-card">
@@ -544,7 +619,7 @@ export default function PlayerPage() {
     }
 
     // 5) Successfully retrieved video information
-    if (videoInfo) {
+    if (videoInfo?.videoUrl) {
       return (
         <div className="player-page success-view">
           <div className="header">
@@ -586,24 +661,17 @@ export default function PlayerPage() {
                   <h3>Video Information</h3>
                   <div className="info-grid">
                     <div className="info-item">
-                      <div className="info-header">
-                        <label>Video URL</label>
-                        <button
-                          className="copy-button"
-                          onClick={() => copyToClipboard(videoInfo.videoUrl, 'videoUrl')}
-                        >
-                          {copiedItems['videoUrl'] ? '✓ Copied' : 'Copy'}
-                        </button>
-                      </div>
-                      <a
-                        href={videoInfo.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="info-link"
-                        style={{wordBreak: 'break-all'}}
+                      <label>Download Video</label>
+                      <button
+                        className={`download-button ${!videoInfo.mp4Url ? 'disabled' : ''}`}
+                        onClick={handleDownload}
+                        disabled={!videoInfo.mp4Url}
                       >
-                        {videoInfo.videoUrl}
-                      </a>
+                        {videoInfo.mp4Url ? '⬇️ Download' : '⏳ MP4 Generating...'}
+                      </button>
+                      {!videoInfo.mp4Url && (
+                        <p className="download-tip">MP4 file is being generated, please wait...</p>
+                      )}
                     </div>
                     <div className="info-item">
                       <div className="info-header">
