@@ -474,9 +474,14 @@ export default function PlayerPage() {
       return (
         <div className="player-page generating-view">
           <div className="header">
-            <button onClick={() => navigate(-1)} className="back-button">
-              ← Back
-            </button>
+            <div className="header-buttons">
+              <button onClick={() => navigate(-1)} className="back-button">
+                ← Back
+              </button>
+              <button onClick={() => navigate('/')} className="home-button">
+                🏠 Home
+              </button>
+            </div>
             <h1>Generating Video</h1>
           </div>
 
@@ -546,9 +551,14 @@ export default function PlayerPage() {
       return (
         <div className="player-page generating-view">
           <div className="header">
-            <button onClick={() => navigate(-1)} className="back-button">
-              ← Back
-            </button>
+            <div className="header-buttons">
+              <button onClick={() => navigate(-1)} className="back-button">
+                ← Back
+              </button>
+              <button onClick={() => navigate('/')} className="home-button">
+                🏠 Home
+              </button>
+            </div>
             <h1>Processing in Background</h1>
           </div>
 
@@ -615,9 +625,14 @@ export default function PlayerPage() {
       return (
         <div className="player-page success-view">
           <div className="header">
-            <button onClick={() => navigate(-1)} className="back-button">
-              ← Back
-            </button>
+            <div className="header-buttons">
+              <button onClick={() => navigate(-1)} className="back-button">
+                ← Back
+              </button>
+              <button onClick={() => navigate('/')} className="home-button">
+                🏠 Home
+              </button>
+            </div>
             <h1>{videoInfo.title}</h1>
           </div>
 

@@ -636,3 +636,31 @@
   color: #f39c12;
   font-style: italic;
 }
+
+/* 头部按钮容器 */
+.header-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* 主页按钮样式 */
+.home-button {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  font-size: 16px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.home-button:hover {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
