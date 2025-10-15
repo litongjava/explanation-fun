@@ -152,9 +152,12 @@ export default function PlayerPage() {
 
       if (res.ok && result.code === 1 && result.ok && result.data) {
         const data = result.data as any;
-        if (data.video_url) {
+        // 优先使用 mp4，如果没有则使用 m3u8
+        const playbackUrl = data.mp4_url || data.video_url;
+
+        if (playbackUrl) {
           setVideoInfo({
-            videoUrl: data.video_url,
+            videoUrl: playbackUrl,
             mp4Url: data.mp4_url || undefined,
             coverUrl: getSafeCoverUrl(data.cover_url),
             subtitle_url: data.subtitle_url,
@@ -310,10 +313,12 @@ export default function PlayerPage() {
 
         if (res.ok && result.code === 1 && result.ok && result.data) {
           const data = result.data as any;
-          if (data.video_url) {
+          const playbackUrl = data.mp4_url || data.video_url;
+
+          if (playbackUrl) {
             clearInterval(timerRef.current);
             setVideoInfo({
-              videoUrl: data.video_url,
+              videoUrl: playbackUrl,
               mp4Url: data.mp4_url || undefined,
               coverUrl: getSafeCoverUrl(data.cover_url),
               subtitle_url: data.subtitle_url,
@@ -362,7 +367,7 @@ export default function PlayerPage() {
       screenshot: true,
       video: {
         url: videoInfo.videoUrl,
-        pic: videoInfo.coverUrl, // Ensure cover URL is valid
+        pic: videoInfo.coverUrl,
         type: videoType,
       },
       pluginOptions: {
@@ -392,20 +397,30 @@ export default function PlayerPage() {
 
     dpRef.current = new DPlayer(options);
 
-    if (videoType === 'hls' && dpRef.current.video) {
+    if (dpRef.current.video) {
       dpRef.current.video.addEventListener('loadedmetadata', () => {
         if (dpRef.current.video.textTracks.length > 0) {
           const track = dpRef.current.video.textTracks[0];
-          console.log('Subtitle track mode:', track.mode);
-          // Force show subtitles
           track.mode = 'showing';
         }
         dpRef.current.video.currentTime = 0.1;
-        dpRef.current.play();
 
+        dpRef.current.play().catch((err: any) => {
+          console.warn('自动播放被阻止:', err);
+          // ✅ 显示播放按钮提示
+          if (dpRef.current && dpRef.current.container) {
+            const notice = dpRef.current.container.querySelector('.dplayer-notice');
+            if (notice) {
+              notice.innerHTML = 'Click the play button to start watching';
+              notice.style.opacity = '1';
+              setTimeout(() => {
+                notice.style.opacity = '0';
+              }, 3000);
+            }
+          }
+        });
       });
     }
-
     return () => {
       if (dpRef.current) {
         if (dpRef.current.$hls) dpRef.current.$hls.destroy();
