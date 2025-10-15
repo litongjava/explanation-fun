@@ -362,7 +362,7 @@ export default function PlayerPage() {
 
     let options: DPlayerOptions = {
       container: containerRef.current!,
-      autoplay: false,
+      autoplay: true,
       preload: 'auto',
       screenshot: true,
       video: {
@@ -403,22 +403,6 @@ export default function PlayerPage() {
           const track = dpRef.current.video.textTracks[0];
           track.mode = 'showing';
         }
-        dpRef.current.video.currentTime = 0.1;
-
-        dpRef.current.play().catch((err: any) => {
-          console.warn('自动播放被阻止:', err);
-          // ✅ 显示播放按钮提示
-          if (dpRef.current && dpRef.current.container) {
-            const notice = dpRef.current.container.querySelector('.dplayer-notice');
-            if (notice) {
-              notice.innerHTML = 'Click the play button to start watching';
-              notice.style.opacity = '1';
-              setTimeout(() => {
-                notice.style.opacity = '0';
-              }, 3000);
-            }
-          }
-        });
       });
     }
     return () => {
