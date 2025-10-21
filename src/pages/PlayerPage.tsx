@@ -253,29 +253,19 @@ export default function PlayerPage() {
             }
             return;
           }
-            // Received video URL (mp4)
           // Received video URL (mp4)
           else if (event.type === 'video') {
             try {
               const payload = JSON.parse(event.data) as { url: string };
 
+              // 只更新 mp4Url 用于下载，不修改 videoUrl（播放地址）
               setVideoInfo(prev => {
-                // 如果已经有 videoInfo（已经在播放），只更新 mp4Url，不触发重新渲染播放器
-                if (prev && prev.videoUrl) {
-                  return {
-                    ...prev,
-                    mp4Url: payload.url,
-                  };
-                }
+                if (!prev) return prev;
 
-                // 如果还没有 videoInfo，创建新的（使用 mp4 作为播放源）
                 return {
-                  videoUrl: payload.url,  // 如果 main 还没到，用 mp4 作为播放源
-                  mp4Url: payload.url,
-                  coverUrl: getSafeCoverUrl(prev?.coverUrl),
-                  title: prev?.title || pendingTitle || sseParams.question,
-                  answer: prev?.answer || '',
-                  transcript: prev?.transcript || [],
+                  ...prev,
+                  mp4Url: payload.url  // 只更新下载地址
+                  // 不修改 videoUrl，保持播放器继续播放 main 的 URL
                 };
               });
             } catch (e) {
@@ -412,7 +402,7 @@ export default function PlayerPage() {
         dpRef.current = null;
       }
     };
-  }, [videoInfo]);
+  }, [videoInfo?.videoUrl]);
 
   // 下载视频（带水印）
   const handleDownload = () => {
