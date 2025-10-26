@@ -1,8 +1,7 @@
 // src/pages/PlayerPage.tsx
 import {useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
-import DPlayer, {type DPlayerOptions} from 'dplayer';
-import Hls from 'hls.js';
+import HlsPlayer, {type HlsPlayerHandle} from '../components/HlsPlayer';
 import './PlayerPage.css';
 import {sendVideoSSERequest, type SSEEvent} from '../client/SSEClient.ts';
 import ReactMarkdown from 'react-markdown';
@@ -77,8 +76,15 @@ export default function PlayerPage() {
   const isDev = localStorage.getItem('app.env') === 'dev';
 
   const sseParams = (location.state as SSERouteParams) || null;
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dpRef = useRef<any>(null);
+
+  const playerRef = useRef<HlsPlayerHandle | null>(null);
+  const [playUrl, setPlayUrl] = useState<string | null>(null);
+  const lastPlayUrlRef = useRef<string | null>(null);
+  const setPlayUrlSafe = (u: string | null) => {
+    if (!u || u === lastPlayUrlRef.current) return;
+    lastPlayUrlRef.current = u;
+    setPlayUrl(u);
+  }
 
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [videoId, setVideoId] = useState<string | null>(routeId || null);
@@ -165,6 +171,9 @@ export default function PlayerPage() {
             answer: data.answer || '',
             transcript: Array.isArray(data.transcript) ? data.transcript : [],
           });
+          if (!lastPlayUrlRef.current) {
+            setPlayUrlSafe(playbackUrl);
+          }
         }
       }
     } catch (err) {
@@ -241,13 +250,17 @@ export default function PlayerPage() {
             try {
               const payload = JSON.parse(event.data) as { url: string };
               setVideoInfo(prev => ({
-                videoUrl: payload.url,
-                mp4Url: prev?.mp4Url,  // 保持现有的 mp4Url
+                videoUrl:
+                payload.url,
+                mp4Url: prev?.mp4Url,
                 coverUrl: getSafeCoverUrl(prev?.coverUrl),
                 title: prev?.title || pendingTitle || sseParams.question,
                 answer: prev?.answer || '',
                 transcript: prev?.transcript || [],
               }));
+
+              setPlayUrlSafe(payload.url);
+              return;
             } catch (e) {
               console.error('Failed to parse playback URL:', e);
             }
@@ -338,71 +351,6 @@ export default function PlayerPage() {
 
     return () => clearInterval(timerRef.current);
   }, [videoId, videoInfo, elapsedSeconds, isSSEDone, sseParams]);
-
-  // Initialize player
-  useEffect(() => {
-    if (!videoInfo || !containerRef.current) return;
-
-    let videoType: string = 'normal';
-    if (videoInfo.videoUrl.endsWith('.m3u8')) {
-      videoType = 'hls';
-      // @ts-ignore
-      window.Hls = Hls;
-    }
-
-    let options: DPlayerOptions = {
-      container: containerRef.current!,
-      autoplay: true,
-      preload: 'auto',
-      screenshot: true,
-      video: {
-        url: videoInfo.videoUrl,
-        pic: videoInfo.coverUrl,
-        type: videoType,
-      },
-      pluginOptions: {
-        hls: {
-          debug: false,
-          enableWorker: true,
-          lowLatencyMode: true,
-          maxBufferLength: 60,
-          maxMaxBufferLength: 600,
-          maxBufferSize: 50 * 1000 * 1000,
-          liveSyncDurationCount: 3,
-          liveMaxLatencyDurationCount: 10,
-        },
-      }
-
-    };
-    // if (videoInfo.subtitle_url) {
-    //   options.subtitle = {
-    //     url: videoInfo.subtitle_url,
-    //     type: 'webvtt',
-    //     fontSize: '25px',
-    //     bottom: '2%',
-    //     color: '#000'
-    //   }
-    // }
-
-
-    dpRef.current = new DPlayer(options);
-
-    if (dpRef.current.video) {
-      dpRef.current.video.addEventListener('loadedmetadata', () => {
-        if (dpRef.current.video.textTracks.length > 0) {
-          const track = dpRef.current.video.textTracks[0];
-          track.mode = 'showing';
-        }
-      });
-    }
-    return () => {
-      if (dpRef.current) {
-        if (dpRef.current.$hls) dpRef.current.$hls.destroy();
-        dpRef.current.destroy();
-        dpRef.current = null;
-      }
-    };
-  }, [videoInfo?.videoUrl]);
 
   // 下载视频（带水印）
   const handleDownload = () => {
@@ -627,8 +575,26 @@ export default function PlayerPage() {
           </div>
 
           <div className="video-container">
-            <div ref={containerRef}></div>
+            {playUrl && (
+              <HlsPlayer
+                ref={playerRef}
+                url={playUrl}
+                coverUrl={videoInfo.coverUrl}
+                subtitleUrl={videoInfo.subtitle_url}
+                autoplay
+                onReady={(dp) => {
+                  try {
+                    const tracks = dp.video?.textTracks;
+                    if (tracks && tracks.length > 0) tracks[0].mode = 'showing';
+                  } catch (error) {
+                    console.log("Hls Error:", error)
+                  }
+                }}
+                onError={(e) => console.error('Player init error:', e)}
+              />
+            )}
           </div>
+
 
           <div className="tabs">
             <button
