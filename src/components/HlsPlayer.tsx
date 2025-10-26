@@ -119,7 +119,7 @@ const HlsPlayer = forwardRef<HlsPlayerHandle, HlsPlayerProps>(
         hotkey: true,
         mutex: true,
         contextmenu: [],
-        airplay: false,
+        airplay: true,
         playbackSpeed,
         previewMode: false,
         video: {
