@@ -6,7 +6,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import DPlayer, { type DPlayerOptions } from 'dplayer';
+import DPlayer, {DPlayerEvents, type DPlayerOptions} from 'dplayer';
 import Hls from 'hls.js';
 
 export interface HlsPlayerHandle {
@@ -19,6 +19,7 @@ export interface HlsPlayerHandle {
 export interface HlsPlayerProps {
   url: string;                 // .m3u8 或 .mp4
   coverUrl?: string;
+  subtitleUrl?: string;
   autoplay?: boolean;          // 默认 true（失败则等待用户点击）
   onReady?: (dp: any) => void;
   onError?: (e: unknown) => void;
@@ -242,11 +243,11 @@ const HlsPlayer = forwardRef<HlsPlayerHandle, HlsPlayerProps>(
         dpRef.current = dp;
 
         // 用户播放/暂停：尊重用户意图
-        dp.on('play', () => {
+        dp.on('play' as DPlayerEvents, () => {
           userPausedRef.current = false;
           try { hlsRef.current?.startLoad?.(); } catch {}
         });
-        dp.on('pause', () => {
+        dp.on('pause' as DPlayerEvents, () => {
           userPausedRef.current = true;
           try { hlsRef.current?.stopLoad?.(); } catch {}
         });
